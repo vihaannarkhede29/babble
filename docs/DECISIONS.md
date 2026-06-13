@@ -156,6 +156,54 @@ User feedback + a pasted list of investor-style feature ideas, triaged.
   biometric rule — the opposite of "anonymous." We deliberately store only
   coarse accuracy scores, not an identifying voiceprint, and frame it that way.
 
+## Feedback round 3 — "some sounds are hard even for a clear adult"
+
+User tested on a real mic: EE/EH/OH/OO work; cat(AA), car(AH), and the sibilants
+are hard; "pitch doesn't have to be perfect." A 4-lens adversarial review panel +
+in-browser experiments (synth vowels at shifted formants/pitch) pinned the causes
+— and corrected two of my first instincts.
+
+**Root causes found (the estimator is fine — all sounds self-score ≥0.97 on clean audio):**
+- **F1 clamping.** The open vowels' F1 (cat ~660, hot ~730, higher for non-male
+  speakers ~900–1100) hit the old `F1_MAX = 850` ceiling and all collapsed to
+  "fully open," so they were the hardest to place. **This, not tolerance, was the
+  main bug.**
+- **"car" is R-coloured** ([kɑɹ]) — its formants don't match the /ɑ/ target.
+- **noiseSuppression** (added round 2) attenuates the 6–8 kHz /s/ hiss, dragging
+  measured /s/ toward /ʃ/.
+
+**Implemented now (all verified in-browser, build green):**
+- `F1_MAX` 850 → **1000** — un-saturates the open axis; adult self-scores
+  unchanged, but a +18% higher-pitch speaker's AA 0.74→0.79 and AH 0.78→0.90.
+- `VOWEL_SIGMA` 0.30 → **0.36** — lenient cushion that stays *below* the praise
+  gate for wrong-neighbour vowels (so feedback still teaches).
+- `SIBILANT_SIGMA_OCT` 0.60 → **0.70** + `/s/ centroidTarget` 6500 → **6000** —
+  a dull (suppressed) /s/ at 5200 Hz now scores 0.92 on /s/, still beats /ʃ/.
+- AH example word **"car" → "hot"** (clean /ɑ/, non-rhotic).
+
+**Corrected by the panel (things I was about to do that were wrong):**
+- ❌ Don't just widen σ to ~0.45 — scoring is vs the *active target only*, so σ
+  doesn't fix per-speaker offset, and ≥0.45 makes wrong neighbour vowels cross
+  the praise gate. Kept σ modest and fixed the geometry (F1_MAX) instead.
+- ❌ Don't flip `noiseSuppression` OFF globally — the sibilant path has no
+  periodicity gate and the sibilant scorer has no upper-distance cutoff, so noise
+  would score as /ʃ/. Lowered the /s/ target to compensate for suppression instead.
+
+**Deferred (with the trigger to build):**
+- **Per-speaker calibration** (3-anchor affine map: say EE/AH/OO once → fit the
+  speaker's vowel space → apply before scoring). The principled fix for "hard for
+  any non-adult-male speaker"; ~30 lines of math but ~½ day of first-run UX/state.
+  *Build it if real higher-pitch testing still fails AA/AH after these param fixes.*
+- **High-F0 formant robustness.** At child pitch (F0 ≈ 250–300 Hz) the LPC F2
+  estimate for close-formant vowels (OH, and EE/EH) can collapse (sparse
+  harmonics). This is the real frontier for the *child* end; needs a sturdier
+  estimator (higher order / cepstral) or the calibration above.
+- **Sibilant high-frequency-energy gate** — required *before* `noiseSuppression`
+  could safely be turned off (so room noise can't score as /ʃ/).
+- **Slow replay of the formant trajectory on the chart** — user-requested, no
+  scoring impact, straightforward (we already record the trajectory).
+- **Webcam capture + face-overlay digital mouth** — user-requested polish; defer.
+
 ## Known limitations (honest)
 
 - Synthetic demo voice can score ~100% (it emits near-perfect target formants);

@@ -11,10 +11,14 @@
 import type { AcousticFrame, Phoneme, ScoreResult, VowelPoint } from '../lib/types'
 import { formantToVowel, targetVowel } from './phonemes'
 
-/** Spread of the vowel-space reward (in normalized units). Larger = more lenient. */
-const VOWEL_SIGMA = 0.3
-/** Spread of the sibilant reward (in octaves). */
-const SIBILANT_SIGMA_OCT = 0.6
+/** Spread of the vowel-space reward (in normalized units). Larger = more lenient.
+ *  0.36 forgives normal speaker variation; going past ~0.4 starts letting a
+ *  clearly-wrong neighbour vowel (e.g. EH said at the AA target) cross the praise
+ *  threshold, which would erase the teaching signal. */
+const VOWEL_SIGMA = 0.36
+/** Spread of the sibilant reward (in octaves). 0.7 tolerates real-mic centroid
+ *  drift while keeping the /s/–/ʃ/ contrast (the core therapy signal) distinct. */
+const SIBILANT_SIGMA_OCT = 0.7
 // Permissive floor: clearly-aperiodic noise (≈0.1) still scores 0, but the real
 // voiced/unvoiced decision (with hysteresis) lives in usePracticeEngine so a
 // quiet child isn't rejected. Keep this low; raise the engine's gate instead.

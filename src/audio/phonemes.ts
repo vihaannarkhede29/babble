@@ -19,8 +19,14 @@
 import type { Phoneme, VowelPoint } from '../lib/types'
 
 // Bounds of the formant ranges we normalise against (Hz).
+// F1_MAX is 1000 (not the adult-male ~850) on purpose: children and
+// higher-pitched / louder speakers produce open vowels (cat /æ/, "hot" /ɑ/) with
+// F1 up around 900–1100 Hz. With an 850 ceiling those all clamped to "fully
+// open" and collapsed together, which is why the open vowels were the hardest to
+// hit. Raising the ceiling un-saturates that axis without moving any reference
+// target's score (verified: adult-male self-scores unchanged).
 const F1_MIN = 250
-const F1_MAX = 850
+const F1_MAX = 1000
 const F2_MIN = 800
 const F2_MAX = 2400
 
@@ -99,9 +105,12 @@ export const PHONEMES: Phoneme[] = [
     ipa: 'ɑː',
     grapheme: 'ah',
     label: 'AH',
-    exampleWord: 'car',
-    wordTarget: 'a',
-    emoji: '🚗',
+    // "hot", not "car": in rhotic (American) English "car" is an R-coloured
+    // vowel [kɑɹ] whose formants don't match the plain /ɑ/ target, so even a
+    // correct speaker scored badly. "hot" is a clean /ɑ/.
+    exampleWord: 'hot',
+    wordTarget: 'o',
+    emoji: '🔥',
     mode: 'formant',
     f1: 730,
     f2: 1090,
@@ -151,7 +160,10 @@ export const PHONEMES: Phoneme[] = [
     mode: 'sibilant',
     f1: 0,
     f2: 0,
-    centroidTarget: 6500, // bright, high-frequency hiss
+    // 6000, not 6500: the browser's noiseSuppression attenuates the 6–8 kHz /s/
+    // hiss, so a real mic measures /s/ lower; 6500 made a correct /s/ read as
+    // "too dull" and bleed toward /ʃ/. 6000 keeps clear margin from /ʃ/ (3500).
+    centroidTarget: 6000, // bright, high-frequency hiss
     tongueHeight: 0.85,
     tongueFront: 0.9,
     lipRounding: 0.1,
