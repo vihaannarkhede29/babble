@@ -98,12 +98,12 @@ export function ReplayClip({ title, badge, entry }: Props) {
               y={(24 - h) / 2}
               width={100 / Math.max(1, env.length)}
               height={h}
-              fill={passed ? color : '#4a3d6e'}
+              fill={passed ? color : '#D8CFBF'}
             />
           )
         })}
-        {env.length === 0 && <rect x="0" y="11" width="100" height="2" fill="#4a3d6e" />}
-        <line x1={progress * 100} y1="0" x2={progress * 100} y2="24" stroke="#fff" strokeWidth="0.5" />
+        {env.length === 0 && <rect x="0" y="11" width="100" height="2" fill="#D8CFBF" />}
+        <line x1={progress * 100} y1="0" x2={progress * 100} y2="24" stroke="#1b3a2d" strokeWidth="0.5" />
       </svg>
 
       <div className="replay-heard">I heard “{entry.transcript || '—'}”</div>

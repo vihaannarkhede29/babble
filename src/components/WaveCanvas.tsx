@@ -93,9 +93,9 @@ export function WaveCanvas({ analyser, status }: Props) {
       }
 
       const locked = s === 'success'
-      const childColor = locked ? '#4ade80' : s === 'error' ? '#fb7185' : '#f0abfc'
+      const childColor = locked ? '#4ade80' : s === 'error' ? '#EF6C57' : '#3BBFBF'
       // Target wave (faint) — hidden once locked so the single green wave pops.
-      sine(TARGET_FREQ, TARGET_AMP, phase, locked ? '#4ade80' : '#7c6aa8', locked ? 4 : 2.5, locked ? 12 : 0)
+      sine(TARGET_FREQ, TARGET_AMP, phase, locked ? '#4ade80' : '#9BB0A5', locked ? 4 : 2.5, locked ? 12 : 0)
       // Child wave.
       const childPhase = locked ? phase : phase * (childFreq / TARGET_FREQ)
       sine(childFreq, childAmp, childPhase, childColor, 3.5, locked ? 12 : s === 'listening' ? 8 : 0)

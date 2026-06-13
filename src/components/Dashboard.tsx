@@ -156,15 +156,15 @@ export function Dashboard() {
         <div className="chart-wrap">
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={series} margin={{ top: 8, right: 16, bottom: 4, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2342" />
-              <XAxis dataKey="date" stroke="#9a8fc0" fontSize={11} />
-              <YAxis domain={[0, 100]} stroke="#9a8fc0" fontSize={11} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E6DDCF" />
+              <XAxis dataKey="date" stroke="#6B7D72" fontSize={11} />
+              <YAxis domain={[0, 100]} stroke="#6B7D72" fontSize={11} />
               <Tooltip
-                contentStyle={{ background: '#1c1633', border: '1px solid #3a2f5c', borderRadius: 8 }}
-                labelStyle={{ color: '#cdb4ff' }}
+                contentStyle={{ background: '#FFFFFF', border: '1px solid #E6DDCF', borderRadius: 8 }}
+                labelStyle={{ color: '#1B3A2D' }}
               />
-              <Line type="monotone" dataKey="avg" name="Daily avg %" stroke="#a855f7"
-                strokeWidth={3} dot={{ r: 3, fill: '#a855f7' }} />
+              <Line type="monotone" dataKey="avg" name="Daily avg %" stroke="#3BBFBF"
+                strokeWidth={3} dot={{ r: 3, fill: '#3BBFBF' }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -176,12 +176,12 @@ export function Dashboard() {
         <div className="chart-wrap">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={masteryData} margin={{ top: 8, right: 16, bottom: 4, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2342" />
-              <XAxis dataKey="name" stroke="#9a8fc0" fontSize={11} />
-              <YAxis domain={[0, 100]} stroke="#9a8fc0" fontSize={11} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E6DDCF" />
+              <XAxis dataKey="name" stroke="#6B7D72" fontSize={11} />
+              <YAxis domain={[0, 100]} stroke="#6B7D72" fontSize={11} />
               <Tooltip
-                contentStyle={{ background: '#1c1633', border: '1px solid #3a2f5c', borderRadius: 8 }}
-                cursor={{ fill: 'rgba(168,85,247,0.08)' }}
+                contentStyle={{ background: '#FFFFFF', border: '1px solid #E6DDCF', borderRadius: 8 }}
+                cursor={{ fill: 'rgba(59,191,191,0.08)' }}
               />
               <Bar dataKey="mastery" name="Mastery %" radius={[6, 6, 0, 0]}>
                 {masteryData.map((d) => (
