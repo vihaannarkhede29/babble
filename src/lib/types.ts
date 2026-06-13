@@ -36,6 +36,8 @@ export interface Phoneme {
   grapheme: string // the letters that spell it, 'ee'
   label: string // big friendly label, 'EE'
   exampleWord: string // 'sheep'
+  /** Substring of exampleWord to highlight, when it differs from `grapheme`. */
+  wordTarget?: string
   emoji: string // shown on the card
   mode: ScoreMode
 

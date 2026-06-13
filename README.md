@@ -63,9 +63,10 @@ context: `https://…` or `localhost`).
    as collaboration. A good attempt → confetti, **+XP**, level-up.
 5. **(0:45) Show the outcome.** Open the **Progress** tab. Point at **"+X%
    average accuracy gain this session"** and the **before → after** row. "This is
-   the measurable bit teachers and parents care about." The mastery chart flags
-   that the **/s/ and /ʃ/ sibilants lag** — the classic real-world articulation
-   target.
+   the measurable bit teachers and parents care about." The **Sounds to focus on
+   next** list and mastery chart flag that the **/s/ and /ʃ/ sibilants lag** —
+   the classic real-world articulation target — and **Export progress (CSV)**
+   hands a clean accuracy log to an SLP (no audio, just the numbers).
 6. **(0:55) Land it.** "Runs fully offline on a $50 tablet, kids' audio never
    leaves the device, and there's no login. That's PhonicsForge."
 
@@ -84,10 +85,12 @@ context: `https://…` or `localhost`).
   decimation → autocorrelation → Levinson–Durbin → spectral-envelope
   peak-picking). The score and the mouth diagram are both driven by these live
   measurements. (`src/audio/dsp.ts`)
-- 🎯 **Scoring** against reference vowel formants, with real coaching hints.
+- 🎯 **Scoring** against reference vowel formants, with real coaching hints. A
+  **voicing hysteresis gate** + **median trajectory filter** keep it noise-robust
+  and steady (background noise scores 0; the marker tracks the sound, not jitter).
 - 🕹️ **Game state** — XP, levels, attempts — persisted offline in `localStorage`.
-- 📊 **Dashboard** — Recharts over the real attempt log; the before→after metric
-  is computed from actual session data.
+- 📊 **Dashboard** — Recharts over the real attempt log; before→after metric, a
+  deterministic "focus next" list, and one-click **CSV export** — all from real data.
 - 🔊 **The no-mic fallback is also real DSP**: a source–filter speech
   *synthesizer* generates a vowel waveform with the target formants, which flows
   through the *same* analysis pipeline.

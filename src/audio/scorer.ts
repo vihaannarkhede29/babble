@@ -15,8 +15,10 @@ import { formantToVowel, targetVowel } from './phonemes'
 const VOWEL_SIGMA = 0.3
 /** Spread of the sibilant reward (in octaves). */
 const SIBILANT_SIGMA_OCT = 0.6
-/** Minimum voicing confidence for a vowel to count (rejects background noise). */
-const MIN_VOICED_PERIODICITY = 0.4
+// Permissive floor: clearly-aperiodic noise (≈0.1) still scores 0, but the real
+// voiced/unvoiced decision (with hysteresis) lives in usePracticeEngine so a
+// quiet child isn't rejected. Keep this low; raise the engine's gate instead.
+const MIN_VOICED_PERIODICITY = 0.25
 /** A clearly-voiced sound is NOT a sibilant — guards /s/, /ʃ/ against vowels. */
 const MAX_SIBILANT_PERIODICITY = 0.55
 

@@ -43,6 +43,32 @@ export function Dashboard() {
     .filter((m) => m.attempts > 0)
     .map((m) => ({ name: getPhoneme(m.phonemeId)?.label ?? m.phonemeId, mastery: m.avg }))
 
+  // Deterministic "what to work on next": the lowest-mastery practised sounds.
+  const focus = mastery
+    .filter((m) => m.attempts > 0)
+    .sort((a, b) => a.avg - b.avg)
+    .slice(0, 3)
+
+  // One-click export of the full practice log — the hand-to-an-SLP artifact.
+  // No audio is ever exported, only the derived accuracy numbers.
+  const exportCsv = () => {
+    const header = 'timestamp,sound,ipa,score_percent\n'
+    const rows = [...save.attempts]
+      .sort((a, b) => a.at - b.at)
+      .map((a) => {
+        const p = getPhoneme(a.phonemeId)
+        return `${new Date(a.at).toISOString()},${p?.label ?? a.phonemeId},${p?.ipa ?? ''},${a.score}`
+      })
+      .join('\n')
+    const blob = new Blob([header + rows], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'phonicsforge-progress.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="dashboard">
       <h2 className="dash-title">Progress for Sparky's friend</h2>
@@ -103,6 +129,27 @@ export function Dashboard() {
         </section>
       )}
 
+      {/* deterministic "focus next" — surfaces the sounds that need work */}
+      {focus.length > 0 && (
+        <section className="panel">
+          <h3>Sounds to focus on next</h3>
+          <div className="focus-list">
+            {focus.map((m) => {
+              const p = getPhoneme(m.phonemeId)
+              return (
+                <div className="focus-chip" key={m.phonemeId}>
+                  <span className="focus-dot" style={{ background: scoreColorPct(m.avg) }} />
+                  {p?.emoji} <strong>{p?.label}</strong> — {m.avg}%
+                </div>
+              )
+            })}
+          </div>
+          <p className="panel-note">
+            Lowest-mastery sounds, flagged automatically from practice history.
+          </p>
+        </section>
+      )}
+
       {/* mastery over time */}
       <section className="panel">
         <h3>Mastery over time</h3>
@@ -150,9 +197,14 @@ export function Dashboard() {
         </p>
       </section>
 
-      <button className="reset-btn" onClick={() => gameStore.reset()}>
-        Reset demo data
-      </button>
+      <div className="dash-actions">
+        <button className="export-btn" onClick={exportCsv}>
+          ⬇ Export progress (CSV)
+        </button>
+        <button className="reset-btn" onClick={() => gameStore.reset()}>
+          Reset demo data
+        </button>
+      </div>
     </div>
   )
 }

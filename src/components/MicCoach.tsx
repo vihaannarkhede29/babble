@@ -80,10 +80,10 @@ export function MicCoach() {
     })
   }
 
-  // Drive the live visuals only from genuinely voiced, on-target frames, so the
-  // marker/mouth don't twitch on background noise.
-  const live = engine.active && engine.score ? engine.score.live : null
-  const mouthOpen = engine.active && engine.score ? engine.score.live.open : 0
+  // Drive the live visuals from the median-filtered trajectory point (steady,
+  // noise-robust) — it is null unless the child is genuinely voicing on target.
+  const live = engine.livePoint
+  const mouthOpen = engine.livePoint ? engine.livePoint.open : 0
 
   // --- Start gate: audio needs a user gesture to begin. ---
   if (engine.status !== 'ready') {
@@ -112,7 +112,13 @@ export function MicCoach() {
       {/* Center: the diagram + the talk button */}
       <section className="coach-center">
         <div className="prompt">
-          Say <strong>{target.label}</strong> — like in “{target.exampleWord}” {target.emoji}
+          <div className="prompt-word">
+            Say “<WordWithSound word={target.exampleWord} mark={target.wordTarget ?? target.grapheme} />”{' '}
+            {target.emoji}
+          </div>
+          <div className="prompt-sub">
+            stretch the <strong>{target.label}</strong> sound!
+          </div>
         </div>
         <MouthDiagram target={target} live={live} accuracy={engine.level} />
         <button
@@ -195,5 +201,18 @@ function BrightnessMeter({
         <span>sss 🐍</span>
       </div>
     </div>
+  )
+}
+
+/** Renders a word with its target sound's letters highlighted (e.g. sh**ee**p). */
+function WordWithSound({ word, mark }: { word: string; mark: string }) {
+  const idx = word.toLowerCase().indexOf(mark.toLowerCase())
+  if (idx < 0) return <>{word}</>
+  return (
+    <>
+      {word.slice(0, idx)}
+      <span className="word-target">{word.slice(idx, idx + mark.length)}</span>
+      {word.slice(idx + mark.length)}
+    </>
   )
 }

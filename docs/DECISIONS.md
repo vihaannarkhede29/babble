@@ -104,6 +104,58 @@ that took the single best frame of a hold (so one fluke "locked in" a win). Fix:
   (so silence → "I didn't hear you", never a reward).
 - **Browser `noiseSuppression` enabled** at the mic (was off) as a second layer.
 
+## Feedback round 2 — sensitivity, trajectory, whole-word, and the "investor" list
+
+User feedback + a pasted list of investor-style feature ideas, triaged.
+
+**Implemented now (from the direct feedback):**
+- **Voicing hysteresis (Schmitt trigger).** The earlier fix was too strict and
+  "missed the voice sometimes." Now it's *hard to start* voicing (enter ≥ 0.42
+  periodicity — rejects noise) but *easy to keep* (sustain ≥ 0.26 — won't drop a
+  quiet/breathy child mid-vowel). Energy floors lowered too. Noise is still
+  rejected (verified: white noise scores 0).
+- **Median trajectory filter.** The live marker/mouth now follow the *median* of
+  the last ~6 voiced frames, not the instantaneous value — it tracks the steady
+  tone instead of jittering. (Direct answer to "track the trajectory… not
+  volatile.")
+- **Whole-word framing.** The prompt now leads with the word ("Say *sheep*") and
+  underlines the target letters; we still score the target sound within the
+  utterance. (Saying a whole word is easier for kids than an isolated phoneme.)
+- **CSV export** of the practice log (the hand-to-an-SLP artifact) and a
+  **deterministic "focus next" list** (lowest-mastery sounds) on the dashboard.
+
+**Already true (the investor list re-describes existing behavior):**
+- "Audio-reactive mesh deformer" — the mouth diagram *already* warps to the
+  child's measured formants live (colour-coded), with the dashed target to
+  return to. (We did not add Three.js; the 2D sagittal view is clearer pedagogy
+  and dependency-free. A 3D head is deferred polish.)
+- "Edge fingerprinting / never store audio" — *already* the architecture: audio
+  never leaves memory; we persist only derived scores `{phonemeId, score, at}`.
+
+**Deferred (needs more than the wedge):**
+- True **word-level / multi-phoneme** scoring — needs the production ASR/forced-
+  alignment tier; today we score the target sound inside the word.
+- **Friction telemetry** (amplitude drops + touch-latency → "structural block" →
+  auto muscle-warmth routine) — needs new signal capture *and* rests on an
+  unvalidated inference (quiet ≠ necessarily anxiety). Save for a pilot.
+- **Full SLP clinical portal** (multi-axis behavioral charts, print-preview
+  report) — CSV export is the immediately-useful slice; the rest is product work.
+
+**Contradictions / claims rejected (flagged, NOT shipped):**
+- ❌ **"HIPAA-compliant."** HIPAA governs covered healthcare entities handling
+  PHI; a consumer app storing data in `localStorage` is not HIPAA-grade, and
+  saying so would be a false claim. The relevant regime for kids is **COPPA** —
+  which the on-device design genuinely helps with.
+- ❌ **"Neuromorphic."** That means brain-inspired spiking hardware; nothing here
+  is. It's real-time audio-reactive animation. Using the word invites a
+  knowledgeable judge to ding it.
+- ❌ **"Backend script… at the edge."** There is no backend — it's fully
+  client-side, which is a *stronger* privacy story, so we say that instead.
+- ⚠️ **"Anonymous acoustic vector fingerprint."** A persistent per-child acoustic
+  fingerprint could itself be **biometric PII** under the FTC's Jan-2025 COPPA
+  biometric rule — the opposite of "anonymous." We deliberately store only
+  coarse accuracy scores, not an identifying voiceprint, and frame it that way.
+
 ## Known limitations (honest)
 
 - Synthetic demo voice can score ~100% (it emits near-perfect target formants);

@@ -21,7 +21,7 @@
 // values); a throttled mirror into React state drives the live visuals.
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { AcousticFrame, Phoneme, ScoreResult } from '../lib/types'
+import type { AcousticFrame, Phoneme, ScoreResult, VowelPoint } from '../lib/types'
 import { analyzeFrame } from './dsp'
 import { scoreFrame } from './scorer'
 import { MicFrameProvider, SynthFrameProvider, type FrameProvider } from './capture'
@@ -33,13 +33,20 @@ const MAX_HOLD_MS = 2600
 /** In demo mode, how long the synth takes to "find" the sound (ms). */
 const DEMO_RAMP_MS = 1300
 /** A frame's RMS must exceed this many × the learned room noise floor to count. */
-const NOISE_MARGIN = 2.5
+const NOISE_MARGIN = 2.0
 /** Absolute floor so a dead-silent room can't make the margin trivially small. */
-const ABS_ENERGY_FLOOR = 0.02
+const ABS_ENERGY_FLOOR = 0.015
 /** Consecutive voiced frames required before the score can climb (debounce). */
-const MIN_VOICED_RUN = 4
-/** Total voiced frames a hold needs before it counts as a real attempt (~0.2s). */
-const MIN_VOICED_FRAMES = 12
+const MIN_VOICED_RUN = 3
+/** Total voiced frames a hold needs before it counts as a real attempt (~0.13s). */
+const MIN_VOICED_FRAMES = 8
+// Hysteresis (Schmitt trigger) on voicing confidence: strict to START voicing
+// (rejects noise onset), lenient to KEEP it (won't drop a quiet/breathy child
+// mid-vowel). This is the fix for "it misses my voice sometimes".
+const ENTER_PERIODICITY = 0.42
+const SUSTAIN_PERIODICITY = 0.26
+/** Window (frames) for the median trajectory filter that steadies the marker. */
+const TRAJECTORY_WINDOW = 6
 
 export interface PracticeEngine {
   status: Status
@@ -53,6 +60,8 @@ export interface PracticeEngine {
   isHolding: boolean
   /** True only when the current frame is genuinely voiced on-target (for visuals). */
   active: boolean
+  /** Median-filtered live vowel position (steady marker), or null when not active. */
+  livePoint: VowelPoint | null
   start: () => Promise<void>
   press: () => void
   release: () => void
@@ -72,6 +81,7 @@ export function usePracticeEngine(
   const [level, setLevel] = useState(0)
   const [isHolding, setIsHolding] = useState(false)
   const [active, setActive] = useState(false)
+  const [livePoint, setLivePoint] = useState<VowelPoint | null>(null)
 
   // --- loop refs (never trigger re-renders) ---
   const providerRef = useRef<FrameProvider | null>(null)
@@ -83,6 +93,8 @@ export function usePracticeEngine(
   const sustainedRef = useRef(0) // smoothed accuracy over voiced frames
   const voicedRunRef = useRef(0) // consecutive voiced frames right now
   const voicedFramesRef = useRef(0) // total voiced frames this hold
+  const voicingOnRef = useRef(false) // hysteresis state for the voicing gate
+  const trajRef = useRef<VowelPoint[]>([]) // recent live points (median filter)
   const noiseFloorRef = useRef(ABS_ENERGY_FLOOR) // learned ambient RMS
   const onAttemptRef = useRef(onAttempt)
   const onNoSoundRef = useRef(onNoSound)
@@ -116,14 +128,19 @@ export function usePracticeEngine(
     sustainedRef.current = 0
     voicedRunRef.current = 0
     voicedFramesRef.current = 0
+    voicingOnRef.current = false
+    trajRef.current = []
     setIsHolding(true)
   }, [status])
 
   const finishHold = useCallback(() => {
     if (!holdingRef.current) return
     holdingRef.current = false
+    voicingOnRef.current = false
+    trajRef.current = []
     setIsHolding(false)
     setActive(false)
+    setLivePoint(null)
     const provider = providerRef.current
     if (provider instanceof SynthFrameProvider) provider.silence()
 
@@ -162,12 +179,25 @@ export function usePracticeEngine(
         const f = analyzeFrame(samples, provider.sampleRate)
         const s = scoreFrame(f, targetRef.current)
 
-        // A frame is "active" (real, on-target speech) only when it cleared the
-        // scorer's voicing/periodicity gates AND its energy is clearly above the
-        // ambient floor we've been learning. scoreFrame returns accuracy 0 for
-        // silence/noise, so accuracy>0 already implies the gates passed.
+        // --- Voicing gate: "is the child actually making the sound?" ---
+        // Energy must clear the learned ambient floor...
         const floor = Math.max(ABS_ENERGY_FLOOR, noiseFloorRef.current * NOISE_MARGIN)
-        const frameActive = s.accuracy > 0 && f.rms > floor
+        const hasEnergy = f.rms > floor
+
+        // ...and, for vowels, the sound must be periodic. Hysteresis: harder to
+        // START voicing (rejects noise) than to KEEP it (won't drop a quiet or
+        // breathy child mid-vowel). Sibilants are aperiodic by nature, so they
+        // gate on energy + the scorer only.
+        let voicedNow: boolean
+        if (targetRef.current.mode === 'sibilant') {
+          voicedNow = hasEnergy
+        } else {
+          const thresh = voicingOnRef.current ? SUSTAIN_PERIODICITY : ENTER_PERIODICITY
+          voicingOnRef.current = hasEnergy && f.periodicity >= thresh
+          voicedNow = voicingOnRef.current
+        }
+        // scoreFrame returns 0 for silence/noise, so this is the final say.
+        const frameActive = holdingRef.current && voicedNow && s.accuracy > 0
 
         if (holdingRef.current) {
           if (frameActive) {
@@ -180,9 +210,17 @@ export function usePracticeEngine(
             if (voicedRunRef.current >= MIN_VOICED_RUN) {
               bestRef.current = Math.max(bestRef.current, sustainedRef.current)
             }
+            // Median-filter the live point so the marker tracks the steady
+            // trajectory of the sound, not frame-to-frame jitter.
+            const traj = trajRef.current
+            traj.push(s.live)
+            if (traj.length > TRAJECTORY_WINDOW) traj.shift()
+            setLivePoint(medianPoint(traj))
           } else {
             voicedRunRef.current = 0
             sustainedRef.current *= 0.6 // decay when they stop / go quiet
+            if (trajRef.current.length) trajRef.current = []
+            setLivePoint(null)
           }
           if (performance.now() - holdStartRef.current > MAX_HOLD_MS) finishHold()
           setLevel(sustainedRef.current)
@@ -195,7 +233,7 @@ export function usePracticeEngine(
 
         setFrame(f)
         setScore(s)
-        setActive(holdingRef.current && frameActive)
+        setActive(frameActive)
       }
       rafRef.current = requestAnimationFrame(tick)
     }
@@ -212,5 +250,17 @@ export function usePracticeEngine(
     return () => providerRef.current?.stop()
   }, [])
 
-  return { status, isMic, error, frame, score, level, isHolding, active, start, press, release }
+  return {
+    status, isMic, error, frame, score, level, isHolding, active, livePoint, start, press, release,
+  }
+}
+
+/** Component-wise median of recent vowel points — robust to outlier frames. */
+function medianPoint(points: VowelPoint[]): VowelPoint {
+  const med = (vals: number[]): number => {
+    const s = [...vals].sort((a, b) => a - b)
+    const m = Math.floor(s.length / 2)
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2
+  }
+  return { front: med(points.map((p) => p.front)), open: med(points.map((p) => p.open)) }
 }
