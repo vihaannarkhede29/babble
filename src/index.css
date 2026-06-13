@@ -1,0 +1,47 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-forest: #1b3a2d;
+  --color-sunshine: #ffd166;
+  --color-coral: #ef6c57;
+  --color-cloud: #f7f4ef;
+  --color-dragon-teal: #3bbfbf;
+  --font-nunito: 'Nunito', sans-serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-nunito);
+    background-color: var(--color-cloud);
+    color: var(--color-forest);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100svh;
+  }
+}
+
+@layer components {
+  .card-tactile {
+    @apply rounded-2xl bg-white shadow-[0_8px_24px_rgba(27,58,45,0.12)] transition-transform active:scale-[0.97];
+  }
+
+  .btn-pressable {
+    @apply rounded-xl font-bold transition-all active:translate-y-0.5 active:shadow-inner;
+  }
+
+  .tile-wood {
+    background: linear-gradient(180deg, #fff8ee 0%, #f0dcc0 100%);
+    box-shadow:
+      inset 0 2px 0 rgba(255, 255, 255, 0.8),
+      0 6px 0 #c4a574,
+      0 10px 20px rgba(27, 58, 45, 0.15);
+  }
+}
