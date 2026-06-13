@@ -20,6 +20,8 @@ export interface PracticeWord {
   focusLabel: string
   /** Rough phoneme breakdown, for feedback/display. */
   phonemes: string[]
+  /** Index into `phonemes` of the sound being taught (highlighted in the matrix). */
+  focusIndex: number
   /** Homophones / equivalents that count as a correct attempt. */
   accept: string[]
   /** Common misrecognitions → which focus sound they indicate was off. */
@@ -34,6 +36,7 @@ export const WORDS: PracticeWord[] = [
     focusPhonemeId: 's',
     focusLabel: 'SSS',
     phonemes: ['s', 'ʌ', 'n'],
+    focusIndex: 0,
     accept: ['son'], // homophone
     nearMiss: ['fun', 'sub', 'sin', 'bun'],
   },
@@ -44,6 +47,7 @@ export const WORDS: PracticeWord[] = [
     focusPhonemeId: 'sh',
     focusLabel: 'SH',
     phonemes: ['ʃ', 'ɪ', 'p'],
+    focusIndex: 0,
     accept: [],
     nearMiss: ['sip', 'chip', 'shop', 'sheep'], // "sip" = the /ʃ/→/s/ lisp
   },
@@ -54,6 +58,7 @@ export const WORDS: PracticeWord[] = [
     focusPhonemeId: 'iy',
     focusLabel: 'EE',
     phonemes: ['ʃ', 'iː', 'p'],
+    focusIndex: 1,
     accept: [],
     nearMiss: ['ship', 'sleep', 'cheap', 'sheet'],
   },
@@ -64,6 +69,7 @@ export const WORDS: PracticeWord[] = [
     focusPhonemeId: 'eh',
     focusLabel: 'EH',
     phonemes: ['r', 'ɛ', 'd'],
+    focusIndex: 1,
     accept: ['read'], // past-tense "read" is a homophone of "red"
     nearMiss: ['wed', 'bread', 'rad', 'ride'],
   },
@@ -74,6 +80,7 @@ export const WORDS: PracticeWord[] = [
     focusPhonemeId: 'uw',
     focusLabel: 'OO',
     phonemes: ['m', 'uː', 'n'],
+    focusIndex: 1,
     accept: [],
     nearMiss: ['moo', 'noon', 'mood', 'man'],
   },

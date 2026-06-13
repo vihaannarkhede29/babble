@@ -896,6 +896,187 @@ body {
   border-color: var(--violet-2);
 }
 
+/* ---------- interference wave graph ---------- */
+.wave-canvas {
+  width: 100%;
+  max-width: 340px;
+  height: 92px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+/* ---------- phoneme target matrix ---------- */
+.phoneme-matrix {
+  display: flex;
+  gap: 8px;
+}
+.phoneme-cell {
+  min-width: 46px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 18px;
+  text-align: center;
+  background: var(--surface-2);
+  border: 2px solid var(--line);
+  color: var(--text);
+  transition: all 0.2s ease;
+}
+.phoneme-cell--success {
+  background: rgba(74, 222, 128, 0.18);
+  border-color: #4ade80;
+  color: #bbf7d0;
+  animation: cell-bounce 0.5s ease;
+}
+.phoneme-cell--error {
+  background: rgba(251, 113, 133, 0.18);
+  border-color: #fb7185;
+  color: #fecdd3;
+  animation: cell-wobble 0.5s ease;
+}
+@keyframes cell-bounce {
+  0%, 100% { transform: translateY(0); }
+  35% { transform: translateY(-10px) scale(1.08); }
+}
+@keyframes cell-wobble {
+  0%, 100% { transform: rotate(0); }
+  20% { transform: rotate(-7deg); }
+  60% { transform: rotate(7deg); }
+}
+
+/* ---------- replay panel ---------- */
+.coach-right {
+  overflow-y: auto;
+}
+.replay-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-weight: 700;
+  color: var(--text);
+}
+.cam-toggle {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.cam-toggle--on {
+  color: white;
+  background: linear-gradient(135deg, var(--violet), var(--violet-2));
+  border-color: transparent;
+}
+.replay-card {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.replay-head {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 700;
+  font-size: 14px;
+}
+.replay-score {
+  font-weight: 800;
+}
+.replay-video {
+  width: 100%;
+  border-radius: 10px;
+  background: #000;
+  max-height: 150px;
+}
+.replay-wave {
+  width: 100%;
+  height: 28px;
+}
+.replay-heard {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+.replay-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.replay-play {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, var(--violet), var(--violet-2));
+  border: none;
+  border-radius: 999px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.replay-speeds {
+  display: flex;
+  gap: 4px;
+}
+.replay-speed {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.replay-speed--active {
+  color: white;
+  background: var(--violet-2);
+  border-color: transparent;
+}
+.privacy-note {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---------- SLP summary card ---------- */
+.slp-card {
+  border-left: 3px solid var(--violet);
+}
+.slp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.slp-table th {
+  text-align: left;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.slp-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--surface-2);
+}
+.slp-ipa {
+  color: var(--muted);
+  font-size: 12px;
+}
+.slp-acc {
+  font-weight: 800;
+}
+
 /* ---------- responsive: stack on narrow / portrait ---------- */
 @media (max-width: 880px) {
   body {

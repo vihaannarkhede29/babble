@@ -197,6 +197,44 @@ export function Dashboard() {
         </p>
       </section>
 
+      {/* SLP handoff: a clean clinical summary a parent can show a therapist */}
+      <section className="panel slp-card">
+        <h3>Ready-for-therapy summary</h3>
+        <table className="slp-table">
+          <thead>
+            <tr>
+              <th>Sound</th>
+              <th>Reps</th>
+              <th>Accuracy</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...mastery]
+              .filter((m) => m.attempts > 0)
+              .sort((a, b) => a.avg - b.avg)
+              .map((m) => {
+                const p = getPhoneme(m.phonemeId)
+                return (
+                  <tr key={m.phonemeId}>
+                    <td>
+                      {p?.emoji} <strong>{p?.label}</strong> <span className="slp-ipa">/{p?.ipa}/</span>
+                    </td>
+                    <td>{m.attempts}</td>
+                    <td>
+                      <span className="slp-acc" style={{ color: scoreColorPct(m.avg) }}>
+                        {m.avg}%
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+          </tbody>
+        </table>
+        <p className="panel-note">
+          Hand-off baseline — show this (or the CSV) to a school SLP at the first appointment.
+        </p>
+      </section>
+
       <div className="dash-actions">
         <button className="export-btn" onClick={exportCsv}>
           ⬇ Export progress (CSV)
