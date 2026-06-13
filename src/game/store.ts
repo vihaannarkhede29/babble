@@ -8,9 +8,11 @@
 
 import type { Attempt, Mastery } from '../lib/types'
 import { PHONEMES } from '../audio/phonemes'
-import { buildSeed } from './seed'
 
-const STORAGE_KEY = 'phonicsforge.v1'
+// v2: starts EMPTY (the old v1 shipped a fabricated 14-day seed). Every point on
+// the dashboard is now a real thing the child said — the chart fills in as they
+// practise. Bumping the key also discards any leftover seeded v1 data.
+const STORAGE_KEY = 'babble.game.v2'
 
 interface SaveData {
   attempts: Attempt[]
@@ -45,13 +47,11 @@ function loadInitial(): SaveData {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw) as SaveData
   } catch {
-    // Corrupt/unavailable storage — fall through to a fresh seeded state.
+    // Corrupt/unavailable storage — fall through to a fresh empty state.
   }
-  const attempts = buildSeed()
-  const xp = attempts.reduce((sum, a) => sum + xpForScore(a.score), 0)
-  const fresh = { attempts, xp }
-  persist(fresh)
-  return fresh
+  // No seed: a new learner starts at zero XP and an empty history. Real reps
+  // (Coach + the diagnostic) are the only thing that fills it.
+  return { attempts: [], xp: 0 }
 }
 
 function persist(data: SaveData): void {
@@ -129,6 +129,91 @@ export function dailySeries(attempts: Attempt[]): { date: string; avg: number }[
       date: date.slice(5), // MM-DD
       avg: Math.round(scores.reduce((s, v) => s + v, 0) / scores.length),
     }))
+}
+
+// --- adaptive time series ---------------------------------------------------
+// The dashboard trend zooms its own time axis to match how much history exists:
+// a first session is plotted by the HOUR; once practice spans several days it
+// rolls up to DAYS, then MONTHS, then YEARS. So the chart is dense and useful on
+// day one and stays readable a year later — never a thousand single-rep points.
+
+export type TimeGranularity = 'hour' | 'day' | 'month' | 'year'
+export interface SeriesPoint {
+  label: string
+  avg: number
+  reps: number
+}
+export interface AdaptiveSeries {
+  granularity: TimeGranularity
+  points: SeriesPoint[]
+}
+
+const DAY_MS = 86_400_000
+
+/** Reps recorded since local midnight — drives the home daily goal. */
+export function repsToday(attempts: Attempt[], now: number = Date.now()): number {
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+  return attempts.filter((a) => a.at >= start.getTime()).length
+}
+
+function pickGranularity(spanMs: number): TimeGranularity {
+  if (spanMs <= DAY_MS) return 'hour'
+  if (spanMs <= 45 * DAY_MS) return 'day'
+  if (spanMs <= 730 * DAY_MS) return 'month'
+  return 'year'
+}
+
+function bucketKeyLabel(at: number, g: TimeGranularity): { key: string; label: string } {
+  const d = new Date(at)
+  if (g === 'hour') {
+    const h = d.getHours()
+    const h12 = ((h + 11) % 12) + 1
+    return { key: `${d.toDateString()} ${h}`, label: `${h12}${h < 12 ? 'am' : 'pm'}` }
+  }
+  if (g === 'day') {
+    return { key: d.toISOString().slice(0, 10), label: `${d.getMonth() + 1}/${d.getDate()}` }
+  }
+  if (g === 'month') {
+    return {
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: d.toLocaleString(undefined, { month: 'short' }),
+    }
+  }
+  return { key: `${d.getFullYear()}`, label: `${d.getFullYear()}` }
+}
+
+/** Average score per time-bucket, bucket size chosen from the data's span. */
+export function adaptiveSeries(attempts: Attempt[]): AdaptiveSeries {
+  if (attempts.length === 0) return { granularity: 'hour', points: [] }
+  const sorted = [...attempts].sort((a, b) => a.at - b.at)
+  const span = sorted[sorted.length - 1].at - sorted[0].at
+  const g = pickGranularity(span)
+  const buckets = new Map<string, { label: string; scores: number[] }>()
+  for (const a of sorted) {
+    const { key, label } = bucketKeyLabel(a.at, g)
+    const b = buckets.get(key) ?? { label, scores: [] }
+    b.scores.push(a.score)
+    buckets.set(key, b)
+  }
+  // Map keeps insertion (chronological) order.
+  const points = [...buckets.values()].map((b) => ({
+    label: b.label,
+    avg: Math.round(b.scores.reduce((s, v) => s + v, 0) / b.scores.length),
+    reps: b.scores.length,
+  }))
+  return { granularity: g, points }
+}
+
+const GRANULARITY_LABEL: Record<TimeGranularity, string> = {
+  hour: 'by hour today',
+  day: 'by day',
+  month: 'by month',
+  year: 'by year',
+}
+
+export function granularityLabel(g: TimeGranularity): string {
+  return GRANULARITY_LABEL[g]
 }
 
 /**

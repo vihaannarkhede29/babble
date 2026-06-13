@@ -17,7 +17,7 @@ export function AppHeader() {
       <NavLink to="/" className="brand">
         <span className="brand-mark">🐲</span>
         <div>
-          <h1>PhonicsForge</h1>
+          <h1>Babble</h1>
           <p>Real-time speech coaching for pre-readers</p>
         </div>
       </NavLink>

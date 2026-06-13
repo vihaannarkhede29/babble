@@ -21,9 +21,20 @@ import { useSpeechRecognition, type SpeechAlternative } from '../speech/useSpeec
 import { useAttemptRecorder } from '../speech/useAttemptRecorder'
 import type { PracticeWord } from '../speech/words'
 import { useProfile, profileStore } from '../profile/store'
+import { gameStore } from '../game/store'
 import { playCorrectDing, playWordSuccessDing, prepareAudio } from '../lib/sounds'
 
 const TOTAL = DIAGNOSTIC_WORDS.length
+
+// Map the screener's focus token onto a catalogued phoneme id where one exists,
+// so the screener also feeds the XP/level + the live progress chart.
+const ARPA_TO_CATALOG: Record<string, string> = {
+  S: 's', SH: 'sh', EE: 'iy', IY: 'iy', EH: 'eh', AE: 'ae',
+  OH: 'ow', OW: 'ow', OO: 'uw', UW: 'uw', AA: 'aa', AO: 'aa',
+}
+function catalogId(token: string): string {
+  return ARPA_TO_CATALOG[token] ?? toIpaToken(token)
+}
 /** Words needed to "fill" Blaze's energy bar (the rest is bonus). */
 const ENERGY_GOAL = 12
 
@@ -92,8 +103,14 @@ export function Diagnostic() {
         ...attemptsRef.current,
         { word: dw.word, heard: m.heard, score: m.score, matched: m.matched, tests: dw.tests, at: Date.now() },
       ]
+      // Also count it toward XP/level + the live progress chart.
+      gameStore.recordAttempt(catalogId(dw.tests[0] ?? dw.phonemes[0]), m.score)
       setReaction(clear ? 'celebrating' : 'confused')
-      setFlash(clear ? `Yum! ${dragon} heard “${m.heard}” ⚡` : `${dragon} heard “${m.heard || '…'}”`)
+      setFlash(
+        clear
+          ? `Yum! “${m.heard}” — ${m.score}% match ⚡`
+          : `Heard “${m.heard || '…'}” — ${m.score}% match`,
+      )
       if (clear) void playCorrectDing()
       advanceTimer.current = window.setTimeout(advance, 1300)
     },

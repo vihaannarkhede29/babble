@@ -25,6 +25,7 @@ import { gameStore, masteryByPhoneme, xpForScore } from '../game/store'
 import { dragonLine, eventForScore } from '../game/dragon'
 import { Dragon } from './Dragon'
 import { MicCoach } from './MicCoach'
+import { Confetti } from './Confetti'
 import { WaveCanvas, type WaveStatus } from './WaveCanvas'
 import { PhonemeMatrix, type PhonemeStatus } from './PhonemeMatrix'
 import { ReplayClip, type AttemptClip } from './ReplayClip'
@@ -64,6 +65,8 @@ export function WordPractice({ initialWordId }: { initialWordId?: string } = {})
   const [showHowTo, setShowHowTo] = useState(false)
   const [clips, setClips] = useState<{ best?: AttemptClip; tricky?: AttemptClip }>({})
   const [lastScore, setLastScore] = useState<number | null>(null)
+  const [lastHeard, setLastHeard] = useState('')
+  const [levelUpKey, setLevelUpKey] = useState(0)
   const [customInputs, setCustomInputs] = useState<string[]>(() => loadCustomInputs())
   const [adding, setAdding] = useState(false)
   const [addInput, setAddInput] = useState('')
@@ -97,6 +100,7 @@ export function WordPractice({ initialWordId }: { initialWordId?: string } = {})
 
     nonceRef.current += 1
     setLastScore(m.score)
+    setLastHeard(m.heard)
     setMatrix(computeMatrix(target, m.score, m.matched))
     // On a miss, show how to make the focus sound.
     setShowHowTo(!m.matched && m.score < 85)
@@ -107,6 +111,7 @@ export function WordPractice({ initialWordId }: { initialWordId?: string } = {})
     setXpFloat({ amount: xpForScore(m.score), key: nonceRef.current })
 
     if (leveledUp) {
+      setLevelUpKey((k) => k + 1)
       setDragon({ line: dragonLine({ event: 'levelUp', nonce: nonceRef.current }), mood: 'happy' })
     } else {
       const event = eventForScore(m.score)
@@ -216,6 +221,7 @@ export function WordPractice({ initialWordId }: { initialWordId?: string } = {})
 
   return (
     <div className="coach">
+      {levelUpKey > 0 && <Confetti replay={levelUpKey} />}
       <aside className="coach-left">
         <Dragon line={dragon.line} mood={dragon.mood} mouthOpen={speech.listening ? recorder.level : 0} />
       </aside>
@@ -256,6 +262,24 @@ export function WordPractice({ initialWordId }: { initialWordId?: string } = {})
           <span className="mic-orb-face">{speech.listening ? '👂' : '🎤'}</span>
           <span className="mic-orb-label">{speech.listening ? 'Listening…' : 'Tap & say it'}</span>
         </button>
+
+        {lastScore !== null && !speech.listening && (
+          <div className="score-card card-tactile">
+            <div className="score-num" style={{ color: scoreColorPct(lastScore) }}>
+              {lastScore}
+              <span className="score-pct">%</span>
+            </div>
+            <div className="score-info">
+              <div className="score-label">
+                {lastScore >= 85 ? 'Great match! ⭐' : lastScore >= 60 ? 'So close!' : 'Keep trying!'}
+              </div>
+              <div className="score-heard">I heard “{lastHeard || '—'}”</div>
+            </div>
+            <div className="score-method" title="Browser speech recognition + fuzzy word match (0–100)">
+              match&nbsp;score
+            </div>
+          </div>
+        )}
 
         {speech.listening && speech.interim && (
           <div className="interim">hearing: “{speech.interim}”</div>

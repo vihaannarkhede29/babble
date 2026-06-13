@@ -16,7 +16,14 @@ import {
   YAxis,
 } from 'recharts'
 import { getPhoneme } from '../audio/phonemes'
-import { dailySeries, gameStore, levelInfo, masteryByPhoneme, sessionDelta } from '../game/store'
+import {
+  adaptiveSeries,
+  gameStore,
+  granularityLabel,
+  levelInfo,
+  masteryByPhoneme,
+  sessionDelta,
+} from '../game/store'
 import { SESSION_START } from '../lib/session'
 import { scoreColorPct } from '../lib/colors'
 
@@ -24,7 +31,7 @@ export function Dashboard() {
   const save = useSyncExternalStore(gameStore.subscribe, gameStore.getSnapshot)
 
   const mastery = useMemo(() => masteryByPhoneme(save.attempts), [save.attempts])
-  const series = useMemo(() => dailySeries(save.attempts), [save.attempts])
+  const series = useMemo(() => adaptiveSeries(save.attempts), [save.attempts])
   const deltas = useMemo(() => sessionDelta(save.attempts, SESSION_START), [save.attempts])
 
   const lvl = levelInfo(save.xp)
@@ -72,6 +79,19 @@ export function Dashboard() {
   return (
     <div className="dashboard">
       <h2 className="dash-title">Progress for Sparky's friend</h2>
+
+      {totalReps === 0 && (
+        <section className="panel dash-empty">
+          <div className="dash-empty-emoji">🌱</div>
+          <div>
+            <strong>No practice data yet.</strong>
+            <p className="panel-note">
+              Everything here is real — it fills in the moment a word is practised in the Coach or
+              the “Teach Blaze” screen. Say a few words and watch this update live.
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* headline outcome */}
       <section className="outcome-card">
@@ -150,24 +170,31 @@ export function Dashboard() {
         </section>
       )}
 
-      {/* mastery over time */}
+      {/* accuracy over time — axis auto-zooms from hours → days → months */}
       <section className="panel">
-        <h3>Mastery over time</h3>
-        <div className="chart-wrap">
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={series} margin={{ top: 8, right: 16, bottom: 4, left: -16 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E6DDCF" />
-              <XAxis dataKey="date" stroke="#6B7D72" fontSize={11} />
-              <YAxis domain={[0, 100]} stroke="#6B7D72" fontSize={11} />
-              <Tooltip
-                contentStyle={{ background: '#FFFFFF', border: '1px solid #E6DDCF', borderRadius: 8 }}
-                labelStyle={{ color: '#1B3A2D' }}
-              />
-              <Line type="monotone" dataKey="avg" name="Daily avg %" stroke="#3BBFBF"
-                strokeWidth={3} dot={{ r: 3, fill: '#3BBFBF' }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <h3>
+          Accuracy over time <span className="panel-tag">{granularityLabel(series.granularity)}</span>
+        </h3>
+        {series.points.length > 0 ? (
+          <div className="chart-wrap">
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={series.points} margin={{ top: 8, right: 16, bottom: 4, left: -16 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6DDCF" />
+                <XAxis dataKey="label" stroke="#6B7D72" fontSize={11} />
+                <YAxis domain={[0, 100]} stroke="#6B7D72" fontSize={11} />
+                <Tooltip
+                  contentStyle={{ background: '#FFFFFF', border: '1px solid #E6DDCF', borderRadius: 8 }}
+                  labelStyle={{ color: '#1B3A2D' }}
+                  formatter={(v: number, _n, p) => [`${v}% · ${p?.payload?.reps} reps`, 'avg']}
+                />
+                <Line type="monotone" dataKey="avg" name="avg %" stroke="#3BBFBF"
+                  strokeWidth={3} dot={{ r: 3, fill: '#3BBFBF' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <p className="panel-note">No reps yet — this chart fills in live as words are practised.</p>
+        )}
       </section>
 
       {/* mastery by sound */}

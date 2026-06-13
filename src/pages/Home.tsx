@@ -1,46 +1,91 @@
-// Home.tsx — The hub. Greets the child + Blaze, shows today's goal, and offers the
-// three doors: teach Blaze (diagnostic), practice (the Coach), and the grown-up
-// progress view. A "today's words" rail is reordered by the diagnostic's priority
-// sounds so the child starts where it matters.
+// Home.tsx — The hub. Greets the child + Blaze, shows today's goal as a live
+// progress ring (completes when the daily word count is hit), offers the three
+// doors, and lists Today / Tomorrow / This-week words from the scheduler — with
+// the child's own added words surfaced first and diagnostic-priority sounds
+// flagged.
 
-import { useMemo } from 'react'
+import { useMemo, useState, useSyncExternalStore } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useProfile } from '../profile/store'
+import { gameStore, levelInfo, repsToday } from '../game/store'
 import { Blaze } from '../components/Blaze'
-import { WORDS } from '../speech/words'
+import { type PracticeWord } from '../speech/words'
+import { todaysWords, tomorrowsWords, thisWeeksWords } from '../speech/wordSchedule'
+import { buildCustomWord, loadCustomInputs } from '../speech/customWords'
 import { toIpaToken } from '../speech/phonemeTokens'
+
+type Tab = 'today' | 'tomorrow' | 'week'
+
+function GoalRing({ reps, goal }: { reps: number; goal: number }) {
+  const pct = Math.min(1, goal > 0 ? reps / goal : 1)
+  const R = 34
+  const C = 2 * Math.PI * R
+  const done = reps >= goal
+  return (
+    <svg viewBox="0 0 80 80" className="goal-ring" aria-label={`${reps} of ${goal} words today`}>
+      <circle cx="40" cy="40" r={R} className="goal-ring-track" />
+      <circle
+        cx="40"
+        cy="40"
+        r={R}
+        className="goal-ring-fill"
+        stroke={done ? '#3BBFBF' : '#FFD166'}
+        strokeDasharray={`${C * pct} ${C}`}
+        transform="rotate(-90 40 40)"
+      />
+      <text x="40" y="38" className="goal-ring-num">
+        {Math.min(reps, goal)}/{goal}
+      </text>
+      <text x="40" y="52" className="goal-ring-cap">
+        {done ? 'done!' : 'words'}
+      </text>
+    </svg>
+  )
+}
 
 export function Home() {
   const navigate = useNavigate()
   const { profile, dailyGoal, needsDiagnostic } = useProfile()
+  const save = useSyncExternalStore(gameStore.subscribe, gameStore.getSnapshot)
   const name = profile.childName.trim() || 'friend'
   const dragon = profile.dragonName.trim() || 'Blaze'
 
-  // Order practice words so priority sounds (from the diagnostic) come first.
-  const words = useMemo(() => {
-    const priority = new Set(profile.priorityPhonemes)
-    const avoid = new Set(profile.avoidPhonemes)
-    return [...WORDS].sort((a, b) => {
-      const rank = (w: (typeof WORDS)[number]) => {
-        const ipa = w.phonemes.map(toIpaToken)
-        if (ipa.some((p) => priority.has(p))) return 0
-        if (ipa.some((p) => avoid.has(p))) return 2
-        return 1
-      }
-      return rank(a) - rank(b)
-    })
-  }, [profile.priorityPhonemes, profile.avoidPhonemes])
+  const reps = repsToday(save.attempts)
+  const goalDone = reps >= dailyGoal
+  const lvl = levelInfo(save.xp)
+
+  const custom = useMemo(
+    () => loadCustomInputs().map(buildCustomWord).filter((x): x is PracticeWord => !!x),
+    [],
+  )
+  const lists: Record<Tab, PracticeWord[]> = useMemo(
+    () => ({ today: todaysWords(custom), tomorrow: tomorrowsWords(), week: thisWeeksWords() }),
+    [custom],
+  )
+  const [tab, setTab] = useState<Tab>('today')
+
+  const isPriority = (w: PracticeWord) =>
+    w.phonemes.map(toIpaToken).some((p) => profile.priorityPhonemes.includes(p))
 
   return (
     <div className="home">
       <section className="home-hero card-tactile">
-        <Blaze state="idle" size="lg" />
+        <Blaze state={goalDone ? 'celebrating' : 'idle'} size="lg" glow={goalDone ? 0.6 : 0} />
         <div className="home-hero-text">
           <h1 className="home-greeting">Hi {name}! 👋</h1>
-          <p className="home-tagline">
-            {dragon} is ready to practise. Today's goal: <strong>{dailyGoal} words</strong>.
-          </p>
+          {goalDone ? (
+            <p className="home-tagline">
+              🎉 <strong>Daily goal complete!</strong> {reps} words today. Keep going for bonus XP, or
+              come back tomorrow.
+            </p>
+          ) : (
+            <p className="home-tagline">
+              {dragon} is ready. Goal: <strong>{dailyGoal} words</strong> today — you've done{' '}
+              <strong>{reps}</strong>. Level {lvl.level}.
+            </p>
+          )}
         </div>
+        <GoalRing reps={reps} goal={dailyGoal} />
       </section>
 
       {needsDiagnostic && (
@@ -75,26 +120,43 @@ export function Home() {
       </div>
 
       <section className="home-rail">
-        <h2 className="home-rail-title">Today's words</h2>
+        <div className="rail-tabs">
+          {(['today', 'tomorrow', 'week'] as Tab[]).map((t) => (
+            <button
+              key={t}
+              className={`rail-tab${tab === t ? ' rail-tab--active' : ''}`}
+              onClick={() => setTab(t)}
+            >
+              {t === 'today' ? 'Today' : t === 'tomorrow' ? 'Tomorrow' : 'This week'}
+            </button>
+          ))}
+        </div>
         <div className="home-rail-track">
-          {words.map((w) => {
-            const priority = w.phonemes
-              .map(toIpaToken)
-              .some((p) => profile.priorityPhonemes.includes(p))
+          {lists[tab].map((wd) => {
+            const priority = isPriority(wd)
+            const isCustom = wd.id.startsWith('custom:')
             return (
               <button
-                key={w.id}
+                key={wd.id}
                 className={`rail-word tile-wood btn-pressable${priority ? ' rail-word--priority' : ''}`}
-                onClick={() => navigate(`/practice/${w.id}`)}
+                onClick={() => navigate(`/practice/${wd.id}`)}
               >
-                <span className="rail-word-emoji">{w.emoji}</span>
-                <span className="rail-word-label">{w.word}</span>
-                <span className="rail-word-sound">{w.focusLabel}</span>
+                <span className="rail-word-emoji">{wd.emoji}</span>
+                <span className="rail-word-label">{wd.word}</span>
+                <span className="rail-word-sound">{wd.focusLabel}</span>
                 {priority && <span className="rail-word-flag">focus</span>}
+                {isCustom && !priority && <span className="rail-word-flag rail-word-flag--custom">yours</span>}
               </button>
             )
           })}
         </div>
+        <p className="panel-note rail-note">
+          {tab === 'today'
+            ? "Today's mix — your own words come first. Tap one to practise."
+            : tab === 'tomorrow'
+              ? "Tomorrow's words — a fresh set each day."
+              : 'Everything coming up this week.'}
+        </p>
       </section>
     </div>
   )
