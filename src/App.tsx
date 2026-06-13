@@ -3,7 +3,7 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import { gameStore, levelInfo } from './game/store'
-import { MicCoach } from './components/MicCoach'
+import { WordPractice } from './components/WordPractice'
 import { Dashboard } from './components/Dashboard'
 
 type Tab = 'coach' | 'progress'
@@ -43,7 +43,7 @@ export default function App() {
         </nav>
       </header>
 
-      <main className="app-main">{tab === 'coach' ? <MicCoach /> : <Dashboard />}</main>
+      <main className="app-main">{tab === 'coach' ? <WordPractice /> : <Dashboard />}</main>
     </div>
   )
 }

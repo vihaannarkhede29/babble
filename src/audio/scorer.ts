@@ -10,6 +10,7 @@
 
 import type { AcousticFrame, Phoneme, ScoreResult, VowelPoint } from '../lib/types'
 import { formantToVowel, targetVowel } from './phonemes'
+import { calibratedFormants } from './calibration'
 
 /** Spread of the vowel-space reward (in normalized units). Larger = more lenient.
  *  0.36 forgives normal speaker variation; going past ~0.4 starts letting a
@@ -51,7 +52,10 @@ function scoreVowel(frame: AcousticFrame, target: Phoneme): ScoreResult {
     return { accuracy: 0, live: CENTER, hint: 'Take a breath and make the sound!' }
   }
 
-  const live = formantToVowel(frame.f1, frame.f2)
+  // Warp the measured formants through the per-speaker calibration (identity
+  // until the speaker calibrates), then locate them in the shared vowel space.
+  const c = calibratedFormants(frame.f1, frame.f2)
+  const live = formantToVowel(c.f1, c.f2)
   const goal = targetVowel(target)
   const dist = Math.hypot(live.front - goal.front, live.open - goal.open)
   const accuracy = gaussian(dist, VOWEL_SIGMA)

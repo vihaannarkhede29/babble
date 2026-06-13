@@ -1,12 +1,17 @@
 # 🐲 PhonicsForge
 
-**Real-time speech coaching for pre-readers.** A child taps, holds, and makes a
-sound; the app measures their pronunciation *on-device* from the live audio,
-shows a procedurally-drawn mouth diagram of exactly where to put their tongue and
-lips, and a companion dragon — **Sparky** — learns the sound alongside them so a
-miss feels like teamwork, not failure. It's a fully-offline PWA built to run on
-the cheap tablets real Title I classrooms already own, and it turns a fuzzy goal
-("say it better") into a measurable one (**accuracy % before → after**).
+**Speech coaching for pre-readers.** A child taps the mic and says a word; the
+app recognises their speech, scores it against the target word (with fuzzy
+matching, so a near-miss like "sip" for "ship" earns partial credit and targeted
+coaching), and a companion dragon — **Sparky** — cheers them on so a miss feels
+like teamwork, not failure. Progress is tracked per sound with a measurable
+**accuracy % over time** for parents and teachers.
+
+> **Two recognition modes.** The default uses the browser's **Web Speech API**
+> (robust, real ASR — needs Chrome/Edge/Safari + internet). Where that's
+> unavailable (e.g. Firefox, offline), it automatically falls back to an
+> **on-device formant analyser** with a procedural mouth diagram — fully offline,
+> no audio leaves the device. See `docs/DECISIONS.md` for the tradeoff.
 
 > Built for **Milpitas Hacks 2 — Track 1: Interactive Learning** ("reimagine
 > early childhood learning around *sound and visuals instead of reading*, with
@@ -26,9 +31,10 @@ npm install
 npm run dev          # → http://localhost:5173
 ```
 
-Open the URL, click **Tap to start**, and allow the microphone when asked.
-**No microphone (or you click "block")? It still works** — Sparky falls back to a
-built-in synthetic voice and the entire experience runs.
+Open the URL in **Chrome or Edge**, allow the microphone, tap the mic, and say
+the word. Speech recognition needs a **secure context** (localhost or HTTPS) and
+an internet connection. In an unsupported browser the app automatically switches
+to the offline formant coach.
 
 Other scripts:
 
@@ -49,45 +55,41 @@ context: `https://…` or `localhost`).
 
 ## The 60-second demo ("here's the magic")
 
-1. **(0:00) Open + start.** "This is PhonicsForge — a speech coach for kids who
-   can't read yet. Meet Sparky." Click **Tap to start**.
-2. **(0:10) Speak a vowel.** Hold **Hold & speak** and say **"eeee"**. Watch
-   three things move *together, live*: the **score meter** climbs, the **tongue
-   in the mouth diagram** slides into place and glows green, and the **dot on the
-   vowel chart** jumps to the EE corner. "That's not scripted — it's the live
-   formants of my voice, measured in the browser."
-3. **(0:25) Prove it's real.** Switch to **AH** ("car") and say "ahhh". The dot
-   leaps to the opposite corner. Different sound → different measurement.
-4. **(0:35) Show the companion.** Make a deliberately bad attempt. Sparky says
-   *"Oof, that one's tricky for me too — try again with me!"* — failure reframed
-   as collaboration. A good attempt → confetti, **+XP**, level-up.
-5. **(0:45) Show the outcome.** Open the **Progress** tab. Point at **"+X%
-   average accuracy gain this session"** and the **before → after** row. "This is
-   the measurable bit teachers and parents care about." The **Sounds to focus on
-   next** list and mastery chart flag that the **/s/ and /ʃ/ sibilants lag** —
-   the classic real-world articulation target — and **Export progress (CSV)**
-   hands a clean accuracy log to an SLP (no audio, just the numbers).
-6. **(0:55) Land it.** "Runs fully offline on a $50 tablet, kids' audio never
-   leaves the device, and there's no login. That's PhonicsForge."
+1. **(0:00) Open.** "This is PhonicsForge — a speech coach for kids who can't read
+   yet. Meet Sparky." The Coach shows a word: **"sun" ☀️**.
+2. **(0:10) Say a word.** Tap the mic and say **"sun"**. The volume ring pulses as
+   you speak; a beat later the **score** appears, Sparky celebrates, **+XP**.
+   "That's real speech recognition matching what I said to the target word."
+3. **(0:25) Show the coaching.** Switch to **"ship" 🚢** and deliberately say
+   **"sip"** (the classic /s/-for-/ʃ/ lisp). It scores ~75 and Sparky says
+   *"So close! I heard 'sip' — listen for the SH sound, try 'ship'."* Targeted,
+   not just pass/fail.
+4. **(0:35) Show the companion.** A good attempt → confetti, level-up; a missed
+   one is reframed as teamwork, never shame.
+5. **(0:45) Show the outcome.** Open the **Progress** tab: **mastery over time**,
+   a **Sounds to focus on next** list, before→after, and one-click **Export
+   progress (CSV)** — a clean accuracy log for an SLP (no audio, just numbers).
+6. **(0:55) Land it.** "Real ASR with fuzzy phoneme matching, an offline fallback
+   for any device, and measurable progress. That's PhonicsForge."
 
-> **Tip for a bigger before→after number:** in step 5, first practise a
-> *low-mastery* sound (e.g. **OO** or **SSS**) a few times so the session gain is
-> visibly large.
+> **Tip:** for the lisp demo in step 3, "sip" reliably triggers the SH-sound
+> coaching. Run it in **Chrome/Edge** with the mic allowed.
 
 ---
 
 ## What's real vs. what's faked
 
-**Real (runs live, on-device):**
-- 🎙️ **Microphone capture** via the Web Audio API.
-- 🔬 **The signal processing.** Hand-written DSP — RMS, zero-crossing rate, an
-  **FFT** spectral centroid, and **LPC formant estimation** (pre-emphasis →
-  decimation → autocorrelation → Levinson–Durbin → spectral-envelope
-  peak-picking). The score and the mouth diagram are both driven by these live
-  measurements. (`src/audio/dsp.ts`)
-- 🎯 **Scoring** against reference vowel formants, with real coaching hints. A
-  **voicing hysteresis gate** + **median trajectory filter** keep it noise-robust
-  and steady (background noise scores 0; the marker tracks the sound, not jitter).
+**Real:**
+- 🗣️ **Speech recognition** — the browser's Web Speech API (`maxAlternatives: 3`)
+  transcribes the spoken word. (`src/speech/useSpeechRecognition.ts`)
+- 🎯 **Fuzzy word matching** — `matchWord` scores the transcript against the target
+  with **Levenshtein** edit distance: exact/homophone → 100, near-miss → partial
+  credit + the specific sound to fix. (`src/speech/match.ts`)
+- 🔊 **Live volume ring** on the mic button via a Web Audio AnalyserNode.
+- 🧩 **Offline fallback is real DSP** — when there's no Speech API, an on-device
+  formant analyser (RMS, ZCR, FFT centroid, **LPC** formants with a voicing
+  hysteresis gate + median trajectory filter) drives a procedural mouth diagram.
+  (`src/audio/dsp.ts`, `MicCoach`)
 - 🕹️ **Game state** — XP, levels, attempts — persisted offline in `localStorage`.
 - 📊 **Dashboard** — Recharts over the real attempt log; before→after metric, a
   deterministic "focus next" list, and one-click **CSV export** — all from real data.
@@ -110,7 +112,13 @@ context: `https://…` or `localhost`).
 
 ## How it works (one paragraph)
 
-The first two **formants** (resonances) of a voiced sound encode how the vocal
+**Primary (speech mode):** the browser's Speech API returns up to three candidate
+transcripts of the spoken word; `matchWord` compares each to the target with
+Levenshtein edit distance, accepts exact matches and homophones, and gives
+partial credit + a named sound to fix for near-misses.
+
+**Fallback (offline DSP mode):** the first two **formants** (resonances) of a
+voiced sound encode how the vocal
 tract is shaped: **F1** tracks how open the mouth is, **F2** how far forward the
 tongue sits. Those are exactly the two numbers you need to *score* a vowel and to
 *draw* the correct tongue position — so PhonicsForge estimates them live with LPC
@@ -135,9 +143,10 @@ phonicsforge/
 │  └─ DECISIONS.md         # assumptions + brief↔rubric conflicts
 ├─ public/icons/icon.svg
 └─ src/
-   ├─ audio/    # capture, dsp, phonemes, scorer, practice-engine hook
+   ├─ speech/   # useSpeechRecognition, useMicVolume, words, match (PRIMARY)
+   ├─ audio/    # capture, dsp, phonemes, scorer, calibration, practice-engine (fallback)
    ├─ game/     # store, seed, dragon
-   ├─ components/  # MouthDiagram, VowelSpace, ScoreMeter, Dragon, MicCoach, Dashboard
+   ├─ components/  # WordPractice, MicCoach, MouthDiagram, VowelSpace, Dragon, Dashboard
    └─ lib/      # types, colors, session
 ```
 

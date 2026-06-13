@@ -204,6 +204,46 @@ in-browser experiments (synth vowels at shifted formants/pitch) pinned the cause
   scoring impact, straightforward (we already record the trajectory).
 - **Webcam capture + face-overlay digital mouth** — user-requested polish; defer.
 
+## Feedback round 4 — pivot to the Web Speech API (whole-word recognition)
+
+After repeated real-mic testing, the hand-rolled formant/LPC scoring still didn't
+work reliably on the user's actual voice. Rather than keep tuning a brittle DSP,
+we pivoted the primary recognition to the browser's **Web Speech API**
+(`SpeechRecognition`) — production-grade ASR that genuinely understands speech —
+and match the transcript to the target **word** with Levenshtein fuzzy matching.
+
+**What changed:**
+- New `src/speech/`: `useSpeechRecognition` (3 alternatives, silence timeout,
+  support check), `useMicVolume` (live mic-loudness ring on the button),
+  `words.ts` (5 starter words + phoneme maps + homophones), `match.ts`
+  (Levenshtein + `matchWord`). New `WordPractice` screen is the Coach now.
+- Words map to existing phoneme ids, so the XP/mastery dashboard is unchanged.
+- Homophones are accepted ("son"→sun, "read"→red); near-misses give targeted
+  coaching ("I heard 'sip' — listen for the SH sound").
+
+**The honest tradeoff (this overturns an earlier pillar):**
+- ⚠️ In Chrome the Speech API **streams audio to Google's servers**, so the
+  primary path is **online, not on-device**. This contradicts the earlier
+  "fully offline / audio never leaves the device / COPPA-friendly" framing.
+  We chose **it actually works** over the offline ideal — the right call given
+  the user's repeated "it doesn't work." The privacy/offline story now applies
+  to the *fallback*, not the default.
+- It needs a **secure context** (localhost or HTTPS) for the mic; `http://` on a
+  LAN IP has no `navigator.mediaDevices` (we guard this so it never crashes).
+- Browser support: Chrome/Edge (and Safari) yes; **Firefox no**.
+
+**Kept as the offline fallback:** the entire formant engine (dsp/scorer/
+calibration/usePracticeEngine + MicCoach) is retained and rendered automatically
+when `SpeechRecognition` is unavailable — so the offline/on-device path still
+exists for unsupported browsers. The per-speaker calibration scaffolding
+(`calibration.ts`) also remains for that path.
+
+**Couldn't verify here:** a real "say the word → recognized → scored" round trip
+needs a live mic + network, which headless Playwright doesn't have. Verified
+instead: the full `matchWord`/Levenshtein logic (exact/homophone/fuzzy/phrase),
+support detection, UI render, and graceful error/no-speech handling (no crash).
+The live ASR path is for the user to confirm in Chrome on localhost/HTTPS.
+
 ## Known limitations (honest)
 
 - Synthetic demo voice can score ~100% (it emits near-perfect target formants);

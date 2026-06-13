@@ -16,6 +16,8 @@ export interface AcousticFrame {
    * this is what lets us reject background noise instead of scoring it.
    */
   periodicity: number
+  /** Fundamental frequency (pitch) in Hz, 0 when unvoiced. */
+  f0: number
   /** Zero-crossing rate, 0..1. High for fricatives (/s/, /ʃ/), low for vowels. */
   zcr: number
   /** Spectral centroid in Hz — the "brightness" of the sound. Separates /s/ from /ʃ/. */

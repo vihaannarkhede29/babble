@@ -257,7 +257,10 @@ export function estimateFormants(
  * defence against treating room noise as if it were a vowel — both for the
  * live score (no wild swings on noise) and for awarding XP (no phantom wins).
  */
-export function estimatePeriodicity(x: Float32Array, sampleRate: number): number {
+export function estimateVoicing(
+  x: Float32Array,
+  sampleRate: number,
+): { periodicity: number; f0: number } {
   // Reuse the same decimated band as the formant path (pitch is well below
   // 4 kHz) to keep the lag search cheap. No pre-emphasis: it would attenuate
   // the fundamental we want to detect.
@@ -266,7 +269,7 @@ export function estimatePeriodicity(x: Float32Array, sampleRate: number): number
   const dsFs = sampleRate / factor
   const minLag = Math.floor(dsFs / 400)
   const maxLag = Math.floor(dsFs / 70)
-  if (ds.length <= maxLag + 1) return 0
+  if (ds.length <= maxLag + 1) return { periodicity: 0, f0: 0 }
 
   // Remove DC so the correlation reflects shape, not offset.
   let mean = 0
@@ -278,16 +281,23 @@ export function estimatePeriodicity(x: Float32Array, sampleRate: number): number
     const d = ds[i] - mean
     energy += d * d
   }
-  if (energy <= 0) return 0
+  if (energy <= 0) return { periodicity: 0, f0: 0 }
 
+  // The lag of the strongest peak gives the pitch period → F0.
   let best = 0
+  let bestLag = 0
   for (let lag = minLag; lag <= maxLag; lag++) {
     let sum = 0
     for (let i = lag; i < ds.length; i++) sum += (ds[i] - mean) * (ds[i - lag] - mean)
     const norm = sum / energy
-    if (norm > best) best = norm
+    if (norm > best) {
+      best = norm
+      bestLag = lag
+    }
   }
-  return best < 0 ? 0 : best > 1 ? 1 : best
+  const periodicity = best < 0 ? 0 : best > 1 ? 1 : best
+  const f0 = bestLag > 0 ? dsFs / bestLag : 0
+  return { periodicity, f0 }
 }
 
 // ---------------------------------------------------------------------------
@@ -301,7 +311,9 @@ export function analyzeFrame(x: Float32Array, sampleRate: number): AcousticFrame
   const zcr = zeroCrossingRate(x)
   // Only spend cycles on spectral/formant/pitch work when there is real energy.
   const centroid = voiced ? spectralCentroid(x, sampleRate) : 0
-  const periodicity = voiced ? estimatePeriodicity(x, sampleRate) : 0
+  const { periodicity, f0 } = voiced
+    ? estimateVoicing(x, sampleRate)
+    : { periodicity: 0, f0: 0 }
   const { f1, f2 } = voiced ? estimateFormants(x, sampleRate) : { f1: 0, f2: 0 }
-  return { rms: energy, voiced, periodicity, zcr, centroid, f1, f2 }
+  return { rms: energy, voiced, periodicity, f0, zcr, centroid, f1, f2 }
 }
