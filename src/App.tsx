@@ -1,49 +1,61 @@
-// App.tsx — Shell: branded header with the live XP/level bar, and a two-tab
-// switch between the child's Coach view and the parent/teacher Dashboard.
+// App.tsx — The multi-page shell.
+//
+// BrowserRouter + a gate that funnels first-run users through onboarding. The
+// "everyday" screens (home / practice / progress / settings) wear the branded
+// header; the immersive story flows (onboarding, teach-Blaze, diagnostic) take
+// over the full screen. Practice (our real speech engine) and the Progress
+// dashboard are unchanged — they're now routes instead of tabs.
 
-import { useState, useSyncExternalStore } from 'react'
-import { gameStore, levelInfo } from './game/store'
-import { WordPractice } from './components/WordPractice'
-import { Dashboard } from './components/Dashboard'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { AppHeader } from './components/AppHeader'
+import { useProfile } from './profile/store'
+import { Home } from './pages/Home'
+import { Onboarding } from './pages/Onboarding'
+import { PracticeRoute } from './pages/PracticeRoute'
+import { ProgressRoute } from './pages/ProgressRoute'
+import { Settings } from './pages/Settings'
+import { TeachBlazeIntro } from './pages/TeachBlazeIntro'
+import { Diagnostic } from './pages/Diagnostic'
+import { DiagnosticReport } from './pages/DiagnosticReport'
 
-type Tab = 'coach' | 'progress'
+const IMMERSIVE = new Set(['/onboarding', '/teach-blaze', '/diagnostic'])
 
-export default function App() {
-  const [tab, setTab] = useState<Tab>('coach')
-  const save = useSyncExternalStore(gameStore.subscribe, gameStore.getSnapshot)
-  const lvl = levelInfo(save.xp)
+function Shell() {
+  const location = useLocation()
+  const { isOnboarded } = useProfile()
+
+  // First-run gate: everything funnels through onboarding until a profile exists.
+  if (!isOnboarded && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />
+  }
+
+  const immersive = IMMERSIVE.has(location.pathname)
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="brand">
-          <span className="brand-mark">🐲</span>
-          <div>
-            <h1>PhonicsForge</h1>
-            <p>Real-time speech coaching for pre-readers</p>
-          </div>
-        </div>
-
-        <div className="level-box" title={`${save.xp} XP`}>
-          <div className="level-badge">Lvl {lvl.level}</div>
-          <div className="xp-bar">
-            <div className="xp-fill" style={{ width: `${Math.round(lvl.progress * 100)}%` }} />
-          </div>
-        </div>
-
-        <nav className="tabs">
-          <button className={tab === 'coach' ? 'tab tab--active' : 'tab'}
-            onClick={() => setTab('coach')}>
-            🎤 Coach
-          </button>
-          <button className={tab === 'progress' ? 'tab tab--active' : 'tab'}
-            onClick={() => setTab('progress')}>
-            📊 Progress
-          </button>
-        </nav>
-      </header>
-
-      <main className="app-main">{tab === 'coach' ? <WordPractice /> : <Dashboard />}</main>
+      {!immersive && <AppHeader />}
+      <main className={immersive ? 'app-main app-main--immersive' : 'app-main'}>
+        <Routes>
+          <Route path="/onboarding" element={<Onboarding />} />
+          <Route path="/" element={<Home />} />
+          <Route path="/practice" element={<PracticeRoute />} />
+          <Route path="/practice/:wordId" element={<PracticeRoute />} />
+          <Route path="/teach-blaze" element={<TeachBlazeIntro />} />
+          <Route path="/diagnostic" element={<Diagnostic />} />
+          <Route path="/diagnostic/report" element={<DiagnosticReport />} />
+          <Route path="/dashboard" element={<ProgressRoute />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Shell />
+    </BrowserRouter>
   )
 }

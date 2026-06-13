@@ -31,6 +31,7 @@ import { ReplayClip, type AttemptClip } from './ReplayClip'
 import { ArticulationFace } from './ArticulationFace'
 import { articulationFor } from '../speech/articulation'
 import { scoreColorPct } from '../lib/colors'
+import { playCorrectDing, playWordSuccessDing, prepareAudio } from '../lib/sounds'
 
 interface DragonState {
   line: string
@@ -49,12 +50,13 @@ function computeMatrix(word: PracticeWord, score: number, matched: boolean): Pho
   return word.phonemes.map(() => 'idle')
 }
 
-export function WordPractice() {
+export function WordPractice({ initialWordId }: { initialWordId?: string } = {}) {
   const save = useSyncExternalStore(gameStore.subscribe, gameStore.getSnapshot)
   const mastery = useMemo(() => masteryByPhoneme(save.attempts), [save.attempts])
 
-  const [word, setWord] = useState<PracticeWord>(WORDS[0])
-  const [matrix, setMatrix] = useState<PhonemeStatus[]>(() => idleMatrix(WORDS[0]))
+  const firstWord = (initialWordId && WORDS.find((w) => w.id === initialWordId)) || WORDS[0]
+  const [word, setWord] = useState<PracticeWord>(firstWord)
+  const [matrix, setMatrix] = useState<PhonemeStatus[]>(() => idleMatrix(firstWord))
   const [started, setStarted] = useState(false)
   const [webcam, setWebcam] = useState(false)
   // When true, the graph slot shows the "how to move your mouth" animation
@@ -98,6 +100,9 @@ export function WordPractice() {
     setMatrix(computeMatrix(target, m.score, m.matched))
     // On a miss, show how to make the focus sound.
     setShowHowTo(!m.matched && m.score < 85)
+    // Audio reward (ported from partner): fanfare on a win, soft ding on a strong try.
+    if (m.matched) void playWordSuccessDing()
+    else if (m.score >= 85) void playCorrectDing()
     const leveledUp = gameStore.recordAttempt(target.focusPhonemeId, m.score)
     setXpFloat({ amount: xpForScore(m.score), key: nonceRef.current })
 
@@ -150,6 +155,7 @@ export function WordPractice() {
       speech.stop()
       return
     }
+    void prepareAudio() // resume the audio context on this user gesture
     setStarted(true)
     setLastScore(null)
     setShowHowTo(false)
