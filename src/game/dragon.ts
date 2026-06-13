@@ -18,6 +18,7 @@ export type DragonEvent =
   | 'close' // 60–84
   | 'struggle' // < 60
   | 'levelUp'
+  | 'quiet' // held the button but didn't actually make a sound
 
 export interface DragonContext {
   event: DragonEvent
@@ -51,6 +52,11 @@ const LINES: Record<DragonEvent, string[]> = {
     'No worries — even dragons need practice. Again!',
   ],
   levelUp: ['LEVEL UP! 🎉 We grew stronger together!', 'New level! Our sound-magic is growing! ✨'],
+  quiet: [
+    "I didn't hear you — say it nice and loud! 🐲",
+    'Hmm, my ears are ready… try again, a bit louder! 👂',
+    "Shhh, no sound there! Take a big breath and let's go!",
+  ],
 }
 
 /** Pick a deterministic line for an event (varies with `nonce`). */

@@ -86,11 +86,30 @@ original idea brief (and why that's the defensible choice).
 - **Deployment target: Vercel** (a hackathon sponsor) — it's a static Vite build,
   so `npm run build` → deploy `dist/` with zero config.
 
+## Noise robustness (added after live-mic testing)
+
+Early live-mic use surfaced two coupled bugs: the score swung wildly on
+background noise, and a hold could eventually be rewarded XP even when the child
+said nothing. Both traced to a single weak gate — energy alone (`rms > 0.014`) —
+which let aperiodic room noise reach the LPC formant step, and a scoring rule
+that took the single best frame of a hold (so one fluke "locked in" a win). Fix:
+
+- **Periodicity gate** — frames must be quasi-periodic (voiced) to count, via an
+  autocorrelation-based voicing confidence in dsp.ts. White noise at speech
+  loudness now scores 0 (verified).
+- **Adaptive noise floor** — the engine learns ambient RMS while idle and
+  requires speech clearly above it.
+- **Sustained scoring** — an attempt's score comes from a smoothed run of voiced
+  frames, and **no attempt/XP is recorded unless enough voiced frames occurred**
+  (so silence → "I didn't hear you", never a reward).
+- **Browser `noiseSuppression` enabled** at the mic (was off) as a second layer.
+
 ## Known limitations (honest)
 
 - Synthetic demo voice can score ~100% (it emits near-perfect target formants);
   real mic input is noisier and lands lower — the README demo script accounts for
   this by practising a *low-mastery* sound to show a visible gain.
-- Formant estimation is tuned for clear single vowels in a quiet room; noisy
-  classrooms and connected speech need the production ASR tier.
+- Formant estimation is tuned for clear single vowels; very noisy classrooms and
+  connected speech still want the production ASR tier (the periodicity gate
+  mitigates noise but doesn't replace a trained model).
 - No auth/accounts/multi-profile — out of scope for the wedge (one local learner).

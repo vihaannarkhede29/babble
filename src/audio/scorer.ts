@@ -15,6 +15,10 @@ import { formantToVowel, targetVowel } from './phonemes'
 const VOWEL_SIGMA = 0.3
 /** Spread of the sibilant reward (in octaves). */
 const SIBILANT_SIGMA_OCT = 0.6
+/** Minimum voicing confidence for a vowel to count (rejects background noise). */
+const MIN_VOICED_PERIODICITY = 0.4
+/** A clearly-voiced sound is NOT a sibilant — guards /s/, /ʃ/ against vowels. */
+const MAX_SIBILANT_PERIODICITY = 0.55
 
 const CENTER: VowelPoint = { front: 0.5, open: 0.5 }
 
@@ -30,8 +34,14 @@ export function scoreFrame(frame: AcousticFrame, target: Phoneme): ScoreResult {
 // ---------------------------------------------------------------------------
 
 function scoreVowel(frame: AcousticFrame, target: Phoneme): ScoreResult {
-  // No voiced formants → nothing to score yet.
-  if (!frame.voiced || frame.f1 <= 0 || frame.f2 <= 0) {
+  // Require voiced (periodic) energy with real formants. The periodicity gate
+  // is what stops aperiodic room noise from being scored as a vowel.
+  if (
+    !frame.voiced ||
+    frame.periodicity < MIN_VOICED_PERIODICITY ||
+    frame.f1 <= 0 ||
+    frame.f2 <= 0
+  ) {
     return { accuracy: 0, live: CENTER, hint: 'Take a breath and make the sound!' }
   }
 
@@ -72,8 +82,14 @@ function vowelHint(
 
 function scoreSibilant(frame: AcousticFrame, target: Phoneme): ScoreResult {
   const goal = target.centroidTarget ?? 5000
-  // A sibilant needs airflow (energy) and turbulence (high zero-crossing rate).
-  if (!frame.voiced || frame.zcr < 0.08 || frame.centroid <= 0) {
+  // A sibilant needs airflow (energy) and turbulence (high zero-crossing rate),
+  // and must NOT be periodic — otherwise a voiced vowel would score as /s/.
+  if (
+    !frame.voiced ||
+    frame.zcr < 0.1 ||
+    frame.periodicity > MAX_SIBILANT_PERIODICITY ||
+    frame.centroid <= 0
+  ) {
     return {
       accuracy: 0,
       live: { front: 0.5, open: 0.1 },

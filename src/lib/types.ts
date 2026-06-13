@@ -8,8 +8,14 @@
 export interface AcousticFrame {
   /** Root-mean-square amplitude, ~0 (silence) .. ~1 (loud). Used to gate analysis. */
   rms: number
-  /** True when there is enough voiced energy to trust the formant estimates. */
+  /** True when there is enough energy in the window to bother analysing it. */
   voiced: boolean
+  /**
+   * Voicing confidence, 0..1: the normalized autocorrelation peak in the human
+   * pitch range. High for periodic (voiced) speech, low for aperiodic noise —
+   * this is what lets us reject background noise instead of scoring it.
+   */
+  periodicity: number
   /** Zero-crossing rate, 0..1. High for fricatives (/s/, /ʃ/), low for vowels. */
   zcr: number
   /** Spectral centroid in Hz — the "brightness" of the sound. Separates /s/ from /ʃ/. */

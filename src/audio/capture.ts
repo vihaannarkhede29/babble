@@ -43,9 +43,19 @@ export class MicFrameProvider implements FrameProvider {
 
   /** Request the mic and wire up the graph. Throws if unavailable/denied. */
   static async create(): Promise<MicFrameProvider> {
-    // Disable the browser's voice processing — it smears the formants we need.
     const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+      audio: {
+        // Noise suppression ON: classrooms are loud, and stationary background
+        // noise is exactly what was causing jumpy scores / phantom rewards. It
+        // slightly softens formants, but our scoring is relative and lenient,
+        // and the periodicity gate (dsp.ts) is the real noise defence.
+        noiseSuppression: true,
+        // AGC off so silence stays silent (AGC would pump up room noise between
+        // utterances and defeat the voicing gate); echo cancellation is moot for
+        // a mic-only graph.
+        echoCancellation: false,
+        autoGainControl: false,
+      },
     })
     const ctx = new AudioContext()
     const source = ctx.createMediaStreamSource(stream)

@@ -57,7 +57,16 @@ export function MicCoach() {
     [target],
   )
 
-  const engine = usePracticeEngine(target, handleAttempt)
+  // Fired when a hold contained no real speech — coach, never reward silence.
+  const handleNoSound = useCallback(() => {
+    nonceRef.current += 1
+    setDragon({
+      line: dragonLine({ event: 'quiet', nonce: nonceRef.current }),
+      mood: 'listening',
+    })
+  }, [])
+
+  const engine = usePracticeEngine(target, handleAttempt, handleNoSound)
 
   // Keep the most recent coaching hint so we can attach it to a "close" attempt.
   if (engine.score && engine.score.hint) lastHintRef.current = engine.score.hint
@@ -71,9 +80,10 @@ export function MicCoach() {
     })
   }
 
-  const voiced = engine.frame?.voiced ?? false
-  const live = engine.isHolding && voiced && engine.score ? engine.score.live : null
-  const mouthOpen = engine.isHolding && engine.score ? engine.score.live.open : 0
+  // Drive the live visuals only from genuinely voiced, on-target frames, so the
+  // marker/mouth don't twitch on background noise.
+  const live = engine.active && engine.score ? engine.score.live : null
+  const mouthOpen = engine.active && engine.score ? engine.score.live.open : 0
 
   // --- Start gate: audio needs a user gesture to begin. ---
   if (engine.status !== 'ready') {

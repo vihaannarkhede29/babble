@@ -250,6 +250,46 @@ export function estimateFormants(
   return { f1, f2 }
 }
 
+/**
+ * Voicing confidence in [0,1]: the normalized autocorrelation peak within the
+ * human pitch range (≈70–400 Hz). Quasi-periodic voiced speech scores high;
+ * broadband background noise is aperiodic and scores low. This is the key
+ * defence against treating room noise as if it were a vowel — both for the
+ * live score (no wild swings on noise) and for awarding XP (no phantom wins).
+ */
+export function estimatePeriodicity(x: Float32Array, sampleRate: number): number {
+  // Reuse the same decimated band as the formant path (pitch is well below
+  // 4 kHz) to keep the lag search cheap. No pre-emphasis: it would attenuate
+  // the fundamental we want to detect.
+  const factor = Math.max(1, Math.round(sampleRate / FORMANT_TARGET_FS))
+  const ds = decimate(x, factor)
+  const dsFs = sampleRate / factor
+  const minLag = Math.floor(dsFs / 400)
+  const maxLag = Math.floor(dsFs / 70)
+  if (ds.length <= maxLag + 1) return 0
+
+  // Remove DC so the correlation reflects shape, not offset.
+  let mean = 0
+  for (let i = 0; i < ds.length; i++) mean += ds[i]
+  mean /= ds.length
+
+  let energy = 0
+  for (let i = 0; i < ds.length; i++) {
+    const d = ds[i] - mean
+    energy += d * d
+  }
+  if (energy <= 0) return 0
+
+  let best = 0
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let sum = 0
+    for (let i = lag; i < ds.length; i++) sum += (ds[i] - mean) * (ds[i - lag] - mean)
+    const norm = sum / energy
+    if (norm > best) best = norm
+  }
+  return best < 0 ? 0 : best > 1 ? 1 : best
+}
+
 // ---------------------------------------------------------------------------
 // Orchestrator
 // ---------------------------------------------------------------------------
@@ -259,7 +299,9 @@ export function analyzeFrame(x: Float32Array, sampleRate: number): AcousticFrame
   const energy = rms(x)
   const voiced = energy >= VOICING_RMS_THRESHOLD
   const zcr = zeroCrossingRate(x)
+  // Only spend cycles on spectral/formant/pitch work when there is real energy.
   const centroid = voiced ? spectralCentroid(x, sampleRate) : 0
+  const periodicity = voiced ? estimatePeriodicity(x, sampleRate) : 0
   const { f1, f2 } = voiced ? estimateFormants(x, sampleRate) : { f1: 0, f2: 0 }
-  return { rms: energy, voiced, zcr, centroid, f1, f2 }
+  return { rms: energy, voiced, periodicity, zcr, centroid, f1, f2 }
 }

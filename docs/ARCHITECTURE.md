@@ -100,6 +100,18 @@ review:
 Sibilants (/s/, /ʃ/) are scored on **spectral centroid** (an FFT) plus a
 zero-crossing-rate gate, since they have no clear formant structure.
 
+**Noise robustness.** Energy alone is a poor "is someone talking?" signal —
+background noise has energy too, and feeding it to the LPC step yields spurious
+formants that jump around (and could be rewarded by chance). So a frame must
+also be **periodic** to count as a voiced vowel: dsp.ts computes a voicing
+confidence (the normalized autocorrelation peak in the 70–400 Hz pitch range),
+and the scorer rejects anything below threshold. White noise at full speech
+loudness scores **0**. On top of that, `usePracticeEngine` learns the room's
+noise floor while idle, requires energy clearly above it, and only awards an
+attempt after a **sustained run** of voiced frames — so silence and stray noise
+never earn XP, and the live score stops twitching. The browser's own
+`noiseSuppression` is also enabled at the mic.
+
 ## 6. What's real vs. stubbed/seeded in the MVP
 
 | Area | MVP | Production path |
