@@ -17,6 +17,7 @@ import {
   type CSSProperties,
 } from 'react'
 import { WORDS, type PracticeWord } from '../speech/words'
+import { buildCustomWord, loadCustomInputs, saveCustomInputs } from '../speech/customWords'
 import { matchWord } from '../speech/match'
 import { useSpeechRecognition, type SpeechAlternative } from '../speech/useSpeechRecognition'
 import { useAttemptRecorder } from '../speech/useAttemptRecorder'
@@ -27,6 +28,8 @@ import { MicCoach } from './MicCoach'
 import { WaveCanvas, type WaveStatus } from './WaveCanvas'
 import { PhonemeMatrix, type PhonemeStatus } from './PhonemeMatrix'
 import { ReplayClip, type AttemptClip } from './ReplayClip'
+import { ArticulationFace } from './ArticulationFace'
+import { articulationFor } from '../speech/articulation'
 import { scoreColorPct } from '../lib/colors'
 
 interface DragonState {
@@ -54,13 +57,28 @@ export function WordPractice() {
   const [matrix, setMatrix] = useState<PhonemeStatus[]>(() => idleMatrix(WORDS[0]))
   const [started, setStarted] = useState(false)
   const [webcam, setWebcam] = useState(false)
+  // When true, the graph slot shows the "how to move your mouth" animation
+  // instead of the live wave (auto-on after a miss, toggleable any time).
+  const [showHowTo, setShowHowTo] = useState(false)
   const [clips, setClips] = useState<{ best?: AttemptClip; tricky?: AttemptClip }>({})
   const [lastScore, setLastScore] = useState<number | null>(null)
+  const [customInputs, setCustomInputs] = useState<string[]>(() => loadCustomInputs())
+  const [adding, setAdding] = useState(false)
+  const [addInput, setAddInput] = useState('')
+  const [addError, setAddError] = useState('')
   const [xpFloat, setXpFloat] = useState<{ amount: number; key: number } | null>(null)
   const [dragon, setDragon] = useState<DragonState>({
     line: dragonLine({ event: 'greet' }),
     mood: 'idle',
   })
+
+  // Built-in words + the learner's own typed words (rebuilt from saved strings).
+  const allWords = useMemo(() => {
+    const custom = customInputs
+      .map(buildCustomWord)
+      .filter((w): w is PracticeWord => w !== null)
+    return [...WORDS, ...custom]
+  }, [customInputs])
 
   const wordRef = useRef(word)
   wordRef.current = word
@@ -78,6 +96,8 @@ export function WordPractice() {
     nonceRef.current += 1
     setLastScore(m.score)
     setMatrix(computeMatrix(target, m.score, m.matched))
+    // On a miss, show how to make the focus sound.
+    setShowHowTo(!m.matched && m.score < 85)
     const leveledUp = gameStore.recordAttempt(target.focusPhonemeId, m.score)
     setXpFloat({ amount: xpForScore(m.score), key: nonceRef.current })
 
@@ -132,6 +152,7 @@ export function WordPractice() {
     }
     setStarted(true)
     setLastScore(null)
+    setShowHowTo(false)
     setMatrix(idleMatrix(wordRef.current))
     recorderRef.current.beginClip()
     speech.start()
@@ -141,7 +162,25 @@ export function WordPractice() {
     setWord(w)
     setMatrix(idleMatrix(w))
     setLastScore(null)
+    setShowHowTo(false)
     setDragon({ line: `Let's say “${w.word}”! ${w.emoji}`, mood: 'listening' })
+  }
+
+  const submitWord = () => {
+    const w = buildCustomWord(addInput)
+    if (!w) {
+      setAddError('Type a real word (letters only).')
+      return
+    }
+    if (!allWords.some((x) => x.id === w.id)) {
+      const next = [...customInputs, w.word]
+      setCustomInputs(next)
+      saveCustomInputs(next)
+    }
+    setAddInput('')
+    setAddError('')
+    setAdding(false)
+    onPickWord(w) // jump straight into practising it (matrix shows the breakdown)
   }
 
   // --- Fallback: no Speech API → use the offline formant coach. ---
@@ -166,6 +205,9 @@ export function WordPractice() {
           ? 'error'
           : 'idle'
 
+  // Articulation of the focus sound (e.g. ship → /ʃ/), for the "how to" view.
+  const focusArtic = articulationFor(word.phonemes[word.focusIndex] ?? word.phonemes[0])
+
   return (
     <div className="coach">
       <aside className="coach-left">
@@ -184,7 +226,20 @@ export function WordPractice() {
 
         <PhonemeMatrix phonemes={word.phonemes} statuses={matrix} />
 
-        <WaveCanvas analyser={recorder.analyser} status={waveStatus} />
+        <div className="graph-slot">
+          {showHowTo ? (
+            <div className="howto-card">
+              <div className="howto-head">👄 Make the {focusArtic.label} sound</div>
+              <ArticulationFace target={focusArtic} />
+              <div className="howto-cue">{focusArtic.cue}</div>
+            </div>
+          ) : (
+            <WaveCanvas analyser={recorder.analyser} status={waveStatus} />
+          )}
+        </div>
+        <button className="howto-toggle" onClick={() => setShowHowTo((v) => !v)}>
+          {showHowTo ? '🌊 Show wave' : '👄 How to say it'}
+        </button>
 
         <button
           className={`mic-orb${speech.listening ? ' mic-orb--listening' : ''}`}
@@ -234,16 +289,43 @@ export function WordPractice() {
       </section>
 
       <footer className="coach-footer">
+        {adding && (
+          <div className="add-word-form">
+            <input
+              className="add-word-input"
+              autoFocus
+              placeholder="Type a word… (e.g. rabbit)"
+              value={addInput}
+              maxLength={20}
+              onChange={(e) => {
+                setAddInput(e.target.value)
+                setAddError('')
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitWord()
+                if (e.key === 'Escape') setAdding(false)
+              }}
+            />
+            <button className="add-word-go" onClick={submitWord}>
+              Break it down →
+            </button>
+            <button className="add-word-cancel" onClick={() => setAdding(false)}>
+              ✕
+            </button>
+            {addError && <span className="add-word-error">{addError}</span>}
+          </div>
+        )}
         <div className="word-picker" role="tablist" aria-label="Choose a word">
-          {WORDS.map((w) => {
+          {allWords.map((w) => {
             const m = mastery.find((x) => x.phonemeId === w.focusPhonemeId)
             const active = w.id === word.id
+            const custom = w.id.startsWith('custom:')
             return (
               <button
                 key={w.id}
                 role="tab"
                 aria-selected={active}
-                className={`word-card${active ? ' word-card--active' : ''}`}
+                className={`word-card${active ? ' word-card--active' : ''}${custom ? ' word-card--custom' : ''}`}
                 onClick={() => onPickWord(w)}
               >
                 <span className="sound-emoji">{w.emoji}</span>
@@ -255,6 +337,11 @@ export function WordPractice() {
               </button>
             )
           })}
+          <button className="word-card word-card--add" onClick={() => setAdding(true)} aria-label="Add your own word">
+            <span className="sound-emoji">➕</span>
+            <span className="sound-label">Add</span>
+            <span className="sound-word">your word</span>
+          </button>
         </div>
       </footer>
     </div>

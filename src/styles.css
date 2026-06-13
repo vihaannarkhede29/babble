@@ -906,6 +906,71 @@ body {
   border-radius: var(--radius);
 }
 
+/* ---------- articulation "how to" face ---------- */
+.graph-slot {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  justify-content: center;
+}
+.howto-card {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.howto-head {
+  font-weight: 800;
+  color: #f0abfc;
+  font-size: 15px;
+}
+.howto-cue {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+.artic-face {
+  width: 200px;
+  height: 142px;
+}
+.artic-skin {
+  fill: #3a2b54;
+}
+.artic-lip {
+  fill: #e2728f;
+}
+.artic-lip-rim {
+  fill: none;
+  stroke: #f4a6bb;
+  stroke-width: 3;
+}
+.artic-mouth {
+  fill: #1a0f2e;
+}
+.artic-teeth {
+  fill: #fdf2f8;
+}
+.howto-toggle {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+.howto-toggle:hover {
+  border-color: var(--violet-2);
+}
+
 /* ---------- phoneme target matrix ---------- */
 .phoneme-matrix {
   display: flex;
@@ -1075,6 +1140,70 @@ body {
 }
 .slp-acc {
   font-weight: 800;
+}
+
+/* ---------- add-your-own-word ---------- */
+.word-card--add {
+  border-style: dashed;
+  color: var(--muted);
+  justify-content: center;
+}
+.word-card--add:hover {
+  color: var(--text);
+  border-color: var(--violet);
+}
+.word-card--custom {
+  border-color: #6d5a9c;
+}
+.add-word-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.add-word-input {
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--violet);
+  border-radius: 999px;
+  padding: 9px 16px;
+  width: 240px;
+  outline: none;
+}
+.add-word-input::placeholder {
+  color: var(--muted);
+}
+.add-word-go {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, var(--violet), var(--violet-2));
+  border: none;
+  border-radius: 999px;
+  padding: 9px 16px;
+  cursor: pointer;
+}
+.add-word-cancel {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+}
+.add-word-error {
+  color: #fca5a5;
+  font-size: 13px;
+  width: 100%;
+  text-align: center;
 }
 
 /* ---------- responsive: stack on narrow / portrait ---------- */

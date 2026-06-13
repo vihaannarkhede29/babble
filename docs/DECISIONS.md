@@ -244,6 +244,28 @@ instead: the full `matchWord`/Levenshtein logic (exact/homophone/fuzzy/phrase),
 support detection, UI render, and graceful error/no-speech handling (no crash).
 The live ASR path is for the user to confirm in Chrome on localhost/HTTPS.
 
+## Feedback round 5 — articulation cue on miss + add-your-own-word
+
+- **Articulation face** (`ArticulationFace` + `articulation.ts`): a zoomed front
+  view of the mouth that *animates rest→target→rest* so a child sees how to
+  move, with airflow + tongue cues and a one-line instruction. Shows
+  automatically on a focus-sound miss, plus a "👄 How to say it" toggle. Driven by
+  per-sound articulation params (lip width/open/protrude, teeth, tongue, airflow)
+  — pure procedural SVG, walk-through-able for code review.
+- **Add-your-own-word** (`g2p.ts` + `customWords.ts`): type any word → a
+  rule-based grapheme→phoneme converter breaks it down → it's added to the picker
+  and persisted to localStorage, with the phoneme matrix + articulation cues
+  showing how to say it.
+  - **Honest limitation:** English spelling is irregular, so the G2P is a
+    *best-guess* (an exception list patches common irregular words). It only
+    drives the on-screen breakdown + which sound to coach — the pronunciation
+    **grade still comes from speech recognition on the real word**, so an
+    approximate breakdown never causes a wrong score. Verified reasonable on
+    rabbit/ship/snake/cheese/cake/city/giant/frog; "sch", silent letters, and
+    some vowels are approximate.
+  - Custom-word attempts earn XP and (when the focus sound maps to a built-in)
+    feed the dashboard; exotic focus sounds still earn XP but aren't charted.
+
 ## Known limitations (honest)
 
 - Synthetic demo voice can score ~100% (it emits near-perfect target formants);

@@ -5,13 +5,9 @@
 // green; a total miss leaves them neutral. Driven entirely by the word-match
 // result (no per-phoneme audio grading — we infer it from which sound slipped).
 
-export type PhonemeStatus = 'idle' | 'success' | 'error'
+import { articulationFor } from '../speech/articulation'
 
-/** IPA → kid-readable token for the card face. */
-const FACE: Record<string, string> = {
-  s: 'S', ʃ: 'SH', ʌ: 'UH', ɪ: 'IH', iː: 'EE', p: 'P', n: 'N', m: 'M',
-  r: 'R', ɛ: 'EH', d: 'D', uː: 'OO',
-}
+export type PhonemeStatus = 'idle' | 'success' | 'error'
 
 interface Props {
   phonemes: string[]
@@ -23,7 +19,7 @@ export function PhonemeMatrix({ phonemes, statuses }: Props) {
     <div className="phoneme-matrix" aria-hidden="true">
       {phonemes.map((p, i) => (
         <span key={i} className={`phoneme-cell phoneme-cell--${statuses[i] ?? 'idle'}`}>
-          {FACE[p] ?? p.toUpperCase()}
+          {articulationFor(p).label}
         </span>
       ))}
     </div>
