@@ -1,4 +1,4 @@
-// Shared domain types for PhonicsForge.
+// Shared domain types for Babble.
 //
 // The data flows in one direction:
 //   raw mic samples  ->  AcousticFrame (dsp.ts)  ->  ScoreResult (scorer.ts)  ->  UI

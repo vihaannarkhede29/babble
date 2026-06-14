@@ -30,6 +30,7 @@ import { WaveCanvas, type WaveStatus } from './WaveCanvas'
 import { PhonemeMatrix, type PhonemeStatus } from './PhonemeMatrix'
 import { ReplayClip, type AttemptClip } from './ReplayClip'
 import { ArticulationFace } from './ArticulationFace'
+import { WordInfo } from './WordInfo'
 import { articulationFor } from '../speech/articulation'
 import { scoreColorPct } from '../lib/colors'
 import { playCorrectDing, playWordSuccessDing, prepareAudio } from '../lib/sounds'
@@ -235,6 +236,8 @@ export function WordPractice({ initialWordId }: { initialWordId?: string } = {})
             the <strong>{word.focusLabel}</strong> sound
           </div>
         </div>
+
+        <WordInfo word={word.word} />
 
         <PhonemeMatrix phonemes={word.phonemes} statuses={matrix} />
 

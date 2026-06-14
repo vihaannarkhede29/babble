@@ -10,7 +10,7 @@ import {
   normalizeProfile,
 } from './profile'
 
-const STORAGE_KEY = 'phonicsforge.profile.v1'
+const STORAGE_KEY = 'babble.profile.v1'
 
 function loadInitial(): ChildProfile {
   try {

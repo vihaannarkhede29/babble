@@ -5,7 +5,7 @@
 import { useSyncExternalStore } from 'react'
 import type { DiagnosticResult } from './inference'
 
-const STORAGE_KEY = 'phonicsforge.diagnostic.v1'
+const STORAGE_KEY = 'babble.diagnostic.v1'
 
 function loadInitial(): DiagnosticResult | null {
   try {

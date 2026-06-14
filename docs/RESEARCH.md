@@ -1,4 +1,4 @@
-# Research — PhonicsForge
+# Research — Babble
 
 Light validation of the idea before building. Every figure below was pulled from
 a primary source and re-checked against the live page (see **Sources**). Where a
@@ -24,7 +24,7 @@ Rockets (Moats & Tolman) state plainly: *"Phonological awareness is critical for
 learning to read any alphabetic writing system… difficulty with phoneme
 awareness… is a predictor of poor reading and spelling development"* [2]. If a
 child cannot hear and produce the sounds, decoding stalls. That is exactly the
-layer PhonicsForge drills.
+layer Babble drills.
 
 **Pronunciation problems are common and under-served.** NIDCD (NIH) reports the
 prevalence of speech-sound disorders in young children is **8–9%**, and roughly
@@ -37,7 +37,7 @@ disorder prevalence at **2.1%–23% for ages 4–6** [5].
 classroom phonics instruction, or paid apps. The SLP channel is rationed —
 **78% of school SLPs on ASHA's 2024 survey said there are more job openings than
 job seekers** [4], i.e. a structural shortage. A child waits weeks for minutes of
-1:1 time. PhonicsForge is unlimited, immediate, low-stakes daily practice that
+1:1 time. Babble is unlimited, immediate, low-stakes daily practice that
 sits *between* classroom instruction and scarce specialist time.
 
 **Why now:** (a) the post-COVID reading-loss data above; (b) a policy wave —
@@ -85,7 +85,7 @@ offline, runs on hardware schools already own.** (See risks.)
 | **Amira Learning** | AI reading assistant used in schools (reading fluency) | Reading-fluency lane, enterprise. |
 | **Teach Your Monster to Read / Hooked on Phonics** | Gamified phonics curricula | No microphone analysis of the child's own production. |
 
-**PhonicsForge's wedge / differentiation:** none of the above *measure the
+**Babble's wedge / differentiation:** none of the above *measure the
 child's own articulation in real time and show them how to physically reposition
 the mouth.* The combination of (a) live formant/phoneme scoring, (b) a procedural
 mouth diagram, and (c) offline operation on a cheap tablet is the gap.

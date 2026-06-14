@@ -35,7 +35,7 @@ export interface Calibration {
   m: number[] // length 6
 }
 
-const STORAGE_KEY = 'phonicsforge.calibration.v1'
+const STORAGE_KEY = 'babble.calibration.v1'
 
 /** Reference formants for the anchors (the adult-male targets we map onto). */
 function referenceAnchors(): Formants[] {

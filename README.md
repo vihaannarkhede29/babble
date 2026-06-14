@@ -1,162 +1,158 @@
-# 🐲 PhonicsForge
+# 🐉 Babble
 
-**Speech coaching for pre-readers.** A child taps the mic and says a word; the
-app recognises their speech, scores it against the target word (with fuzzy
-matching, so a near-miss like "sip" for "ship" earns partial credit and targeted
-coaching), and a companion dragon — **Sparky** — cheers them on so a miss feels
-like teamwork, not failure. Progress is tracked per sound with a measurable
-**accuracy % over time** for parents and teachers.
+Real-time, in-browser speech coaching for pre-readers (~ages 3–8). Teach a baby dragon to talk, and it teaches your kid to talk back.
 
-> **Two recognition modes.** The default uses the browser's **Web Speech API**
-> (robust, real ASR — needs Chrome/Edge/Safari + internet). Where that's
-> unavailable (e.g. Firefox, offline), it automatically falls back to an
-> **on-device formant analyser** with a procedural mouth diagram — fully offline,
-> no audio leaves the device. See `docs/DECISIONS.md` for the tradeoff.
+Babble is an **offline-first PWA** with **no backend, no accounts, and 100% on-device** processing. Built for **Milpitas Hacks 2** (Track 1: Interactive Learning). Formerly "PhonicsForge."
 
-> Built for **Milpitas Hacks 2 — Track 1: Interactive Learning** ("reimagine
-> early childhood learning around *sound and visuals instead of reading*, with
-> *game mechanics and playful rewards*").
+---
+
+## What it is
+
+A kid speaks a word into the mic. Babble listens, scores the attempt on a clean 0–100 scale, and turns every rep into XP for a dragon companion. Underneath the play is an honest early phoneme screener and a real, live-updating progress dashboard a parent (or speech-language pathologist) can actually read.
+
+---
+
+## Headline features
+
+- **The Coach — speak a word, see a real score.** After each attempt a clean score card shows the **0–100 %**, the **recognized word**, and a **"match score"** caption. No black box: the number you see is the number that was computed.
+- **Teach Blaze — a diagnostic disguised as play.** A ~27-word screener framed as teaching a just-hatched dragon (Blaze) to talk. A Blaze energy bar fills as words are said; the kid gets canvas confetti + a star rating at the end. Honest per-phoneme inference, not fabricated confidence numbers (see below).
+- **Real XP and levels.** No fabricated seed data — XP is earned **only from real reps**. Both the Coach and the diagnostic feed the game store. A gentle sqrt level curve; level-ups fire confetti.
+- **Live adaptive progress dashboard.** Plots **only what the child actually said**, updating live. The time axis auto-zooms from **HOUR → DAYS → MONTHS → YEARS** as history grows. Before→after session accuracy delta, mastery-by-sound bars, and a "ready-for-therapy" SLP summary table + CSV.
+- **40-word scheduler + add-your-own-word.** 40 illustrated words across 8 focus sounds (vowels /iː ɛ æ ɑː oʊ uː/ plus the /s/ and /ʃ/ sibilants). A deterministic **Today / Tomorrow / This-week** rotation; the child's own typed words (rule-based g2p breakdown) surface first in Today. Home shows a daily-goal progress ring that completes.
+- **Dictionary enrichment (with a hidden deep cut).** An **optional** online layer using the free, key-less, CORS-open Free Dictionary API shows the real IPA phonetic, a kid-friendly definition, and a 🔊 pronunciation clip — all cached to localStorage so it works offline after the first fetch. A hidden "deep cut" obscure definition is revealed **only** when a curious user pries (double-click / long-press) — never shown by default.
+- **Offline-first PWA.** Installable, service-worker precached, runs with no network.
+- **Parent PIN gate.** An optional 4-digit PIN sits in front of Progress, Settings, and the diagnostic report.
+
+---
+
+## How grading works (honestly)
+
+We're deliberate about what's real here:
+
+- **The verdict comes from Web Speech + fuzzy word-match.** The primary grader — for **both** the Coach and the diagnostic — is the browser **Web Speech API** (`SpeechRecognition`). It transcribes the spoken word to text, then `matchWord()` scores it with **Levenshtein fuzzy string similarity → 0–100** (exact word / accepted homophone = 100). This is a string-similarity scalar, **not** acoustic.
+- **The DSP engine powers visuals and an offline fallback.** The hand-rolled DSP code (`src/audio/`: LPC formant estimation, FFT, Gaussian formant-distance scoring) drives **(a)** the live "interference wave" visualization (`WaveCanvas`) and **(b)** `MicCoach`, an **offline fallback grader** for browsers without the Web Speech API (e.g. Firefox).
+- **No per-phoneme fabrication.** The Web Speech API gives **word-level transcripts only** — no per-phoneme confidence — so we never invent a "/ʃ/ = 73%" number. A sound is **"clear"** if at least one whole screener word containing it was said correctly, **"practise"** if every word testing it missed, else **"untested."**
+- **There is no cosine similarity anywhere.** We don't claim it.
+
+> One-liner: Web Speech recognition + fuzzy word-match for the verdict; a hand-rolled formant/DSP engine powers the live visualization and an offline fallback grader.
+
+The parent report is explicit: this is **a playful early screener, NOT a clinical diagnosis.**
 
 ---
 
 ## Quick start
 
-Requires **Node 18+** (developed on Node 26). No accounts, no API keys, no
-secrets — see `.env.example` (there's nothing to fill in).
+Requires **Node 18+**. Runs from a clean clone — no secrets, no env vars.
 
 ```bash
-git clone <this-repo> phonicsforge
-cd phonicsforge
 npm install
-npm run dev          # → http://localhost:5173
+npm run dev
 ```
 
-Open the URL in **Chrome or Edge**, allow the microphone, tap the mic, and say
-the word. Speech recognition needs a **secure context** (localhost or HTTPS) and
-an internet connection. In an unsupported browser the app automatically switches
-to the offline formant coach.
-
-Other scripts:
+Or build and preview the production PWA:
 
 ```bash
-npm run build        # type-check (tsc) + production build to dist/
-npm run preview      # serve the production build on :4173
-npm run typecheck    # types only
+npm run build
+npm run preview
 ```
-
-### Deploy (optional)
-
-It's a static build, so any static host works. For **Vercel** (a hackathon
-sponsor): `npm i -g vercel && vercel` — framework auto-detected as Vite, output
-`dist/`. HTTPS is provided automatically (the microphone requires a secure
-context: `https://…` or `localhost`).
 
 ---
 
-## The 60-second demo ("here's the magic")
+## Demo script (~60–90s)
 
-1. **(0:00) Open.** "This is PhonicsForge — a speech coach for kids who can't read
-   yet. Meet Sparky." The Coach shows a word: **"sun" ☀️**.
-2. **(0:10) Say a word.** Tap the mic and say **"sun"**. The volume ring pulses as
-   you speak; a beat later the **score** appears, Sparky celebrates, **+XP**.
-   "That's real speech recognition matching what I said to the target word."
-3. **(0:25) Show the coaching.** Switch to **"ship" 🚢** and deliberately say
-   **"sip"** (the classic /s/-for-/ʃ/ lisp). It scores ~75 and Sparky says
-   *"So close! I heard 'sip' — listen for the SH sound, try 'ship'."* Targeted,
-   not just pass/fail.
-4. **(0:35) Show the companion.** A good attempt → confetti, level-up; a missed
-   one is reframed as teamwork, never shame.
-5. **(0:45) Show the outcome.** Open the **Progress** tab: **mastery over time**,
-   a **Sounds to focus on next** list, before→after, and one-click **Export
-   progress (CSV)** — a clean accuracy log for an SLP (no audio, just numbers).
-6. **(0:55) Land it.** "Real ASR with fuzzy phoneme matching, an offline fallback
-   for any device, and measurable progress. That's PhonicsForge."
-
-> **Tip:** for the lisp demo in step 3, "sip" reliably triggers the SH-sound
-> coaching. Run it in **Chrome/Edge** with the mic allowed.
+1. **Onboard (≈15s).** First run gates you into `/onboarding`: meet Blaze → name the child + dragon and set age → pick tricky sounds + session length → optionally set a 4-digit parent PIN. Profile persists to localStorage.
+2. **Teach Blaze (≈25s).** Hit the diagnostic intro, then run the screener: say the ~27 coverage words one at a time. Watch the Blaze energy bar fill; finish to confetti + a star rating.
+3. **See the report (≈15s).** Enter the parent PIN to open the report: a phoneme grid, top sounds to work on with concrete mouth cues, and print-to-PDF / CSV / email export — with the "early screener, not a diagnosis" note.
+4. **Practise a word (≈15s).** Go to the Coach, speak a scheduled word, and get the score card: 0–100 %, the recognized word, and the match-score caption. The live interference wave reacts as you speak.
+5. **Watch the dashboard fill (≈15s).** Open the PIN-gated dashboard. Every rep you just did is plotted live — accuracy delta, mastery-by-sound bars, the auto-zooming time axis, and the SLP summary table. Nothing seeded; all earned.
 
 ---
 
-## What's real vs. what's faked
+## Privacy
 
-**Real:**
-- 🗣️ **Speech recognition** — the browser's Web Speech API (`maxAlternatives: 3`)
-  transcribes the spoken word. (`src/speech/useSpeechRecognition.ts`)
-- 🎯 **Fuzzy word matching** — `matchWord` scores the transcript against the target
-  with **Levenshtein** edit distance: exact/homophone → 100, near-miss → partial
-  credit + the specific sound to fix. (`src/speech/match.ts`)
-- 🔊 **Live volume ring** on the mic button via a Web Audio AnalyserNode.
-- 🧩 **Offline fallback is real DSP** — when there's no Speech API, an on-device
-  formant analyser (RMS, ZCR, FFT centroid, **LPC** formants with a voicing
-  hysteresis gate + median trajectory filter) drives a procedural mouth diagram.
-  (`src/audio/dsp.ts`, `MicCoach`)
-- 🕹️ **Game state** — XP, levels, attempts — persisted offline in `localStorage`.
-- 📊 **Dashboard** — Recharts over the real attempt log; before→after metric, a
-  deterministic "focus next" list, and one-click **CSV export** — all from real data.
-- 🔊 **The no-mic fallback is also real DSP**: a source–filter speech
-  *synthesizer* generates a vowel waveform with the target formants, which flows
-  through the *same* analysis pipeline.
+Everything is on-device. **No audio or video ever leaves the browser** (webcam is opt-in; clips are in-memory object URLs, gone on reload). The **only** network call is the optional dictionary lookup — a word string to a public API — and it is cached.
 
-**Seeded / simplified for the MVP (clearly, honestly):**
-- 📈 A **deterministic 14-day practice history** is seeded on first run so the
-  dashboard looks alive. (Resettable via the Progress tab.)
-- 🧒 Phoneme targets use **adult reference formants**; children's are higher, so
-  scoring is *relative* and lenient. Per-child calibration is the production fix.
-- 🐲 Sparky's encouragement is a **deterministic template engine**, not an LLM.
-- The brief's heavier stack (wav2vec2/MFA, Three.js blendshapes, Ollama/Phi-3,
-  Phaser) is intentionally **not** used in the MVP — see
-  [`docs/DECISIONS.md`](docs/DECISIONS.md) for why, and
-  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §6 for the production path.
+All persistence lives under the `babble.*` localStorage namespace: `babble.game.v2`, `babble.profile.v1`, `babble.diagnostic.v1`, `babble.customwords.v1`, `babble.calibration.v1`, `babble.dict.v1`.
 
 ---
 
-## How it works (one paragraph)
+## Stack
 
-**Primary (speech mode):** the browser's Speech API returns up to three candidate
-transcripts of the spoken word; `matchWord` compares each to the target with
-Levenshtein edit distance, accepts exact matches and homophones, and gives
-partial credit + a named sound to fix for near-misses.
+Vite 5 + React 18 + TypeScript (strict, `noUnusedLocals`). Plain CSS with CSS variables + Nunito font (no Tailwind, no Framer Motion, no Redux/Zustand). `react-router-dom` v6, `recharts` 2, `vite-plugin-pwa`. State via React `useSyncExternalStore` external-store pattern + localStorage.
 
-**Fallback (offline DSP mode):** the first two **formants** (resonances) of a
-voiced sound encode how the vocal
-tract is shaped: **F1** tracks how open the mouth is, **F2** how far forward the
-tongue sits. Those are exactly the two numbers you need to *score* a vowel and to
-*draw* the correct tongue position — so PhonicsForge estimates them live with LPC
-and uses the same coordinates to power the meter, the vowel-chart marker, and the
-animated mouth. Sibilants like /s/ and /ʃ/ have no formant structure, so they're
-scored on spectral brightness (centroid) instead. Full detail in
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+**Routing** (`src/App.tsx`, `BrowserRouter`): a first-run gate funnels new users to `/onboarding` until a profile exists.
 
-## Project layout
+| Route | Purpose |
+|---|---|
+| `/onboarding` | 4-step setup (full-screen) |
+| `/` | Home hub |
+| `/practice`, `/practice/:wordId` | The Coach |
+| `/teach-blaze` | Diagnostic intro (full-screen) |
+| `/diagnostic` | The screener run (full-screen) |
+| `/diagnostic/report` | PIN-gated parent report |
+| `/dashboard` | PIN-gated progress |
+| `/settings` | PIN-gated settings |
+
+Onboarding / teach-blaze / diagnostic render full-screen (no header); the rest wear a branded header with a live XP/level bar.
+
+---
+
+## File map
 
 ```
-phonicsforge/
-├─ README.md
-├─ LICENSE                 # MIT (open source)
-├─ .env.example            # documents that NO env/secrets are needed
-├─ index.html
-├─ vite.config.ts          # + PWA (offline service worker)
-├─ docs/
-│  ├─ RUBRIC.md            # judging criteria + how this build targets each
-│  ├─ RESEARCH.md          # problem/market validation, cited sources, risks
-│  ├─ ARCHITECTURE.md      # diagram, data model, flows, real-vs-stub, stack
-│  └─ DECISIONS.md         # assumptions + brief↔rubric conflicts
-├─ public/icons/icon.svg
-└─ src/
-   ├─ speech/   # useSpeechRecognition, useMicVolume, words, match (PRIMARY)
-   ├─ audio/    # capture, dsp, phonemes, scorer, calibration, practice-engine (fallback)
-   ├─ game/     # store, seed, dragon
-   ├─ components/  # WordPractice, MicCoach, MouthDiagram, VowelSpace, Dragon, Dashboard
-   └─ lib/      # types, colors, session
+src/
+├── App.tsx                 router + first-run gate
+├── components/
+│   ├── AppHeader           branded header w/ live XP/level bar
+│   ├── Blaze               the dragon the child teaches (CSS-animated SVG, 6 states)
+│   ├── Dragon (Sparky)     the Coach's helper companion (mic-driven mouth)
+│   ├── WordPractice        the Coach
+│   ├── WordInfo            dictionary enrichment UI
+│   ├── Dashboard           live adaptive progress
+│   ├── WaveCanvas          live interference-wave visualization
+│   ├── ArticulationFace    mouth-cue visual
+│   ├── MicCoach            offline fallback grader
+│   ├── ReplayClip          in-memory attempt replay
+│   ├── Confetti            hand-rolled canvas confetti
+│   ├── StarRating          end-of-run stars
+│   └── ParentGate          4-digit PIN gate
+├── pages/
+│   ├── Home                hub + daily-goal ring
+│   ├── Onboarding          4-step setup
+│   ├── PracticeRoute       Coach route
+│   ├── ProgressRoute       dashboard route
+│   ├── Settings            PIN-gated settings
+│   ├── TeachBlazeIntro     diagnostic intro
+│   ├── Diagnostic          screener run
+│   └── DiagnosticReport    PIN-gated parent report
+├── speech/
+│   ├── words               40-word database
+│   ├── wordSchedule        Today / Tomorrow / This-week rotation
+│   ├── match               matchWord() Levenshtein fuzzy scoring
+│   ├── useSpeechRecognition  Web Speech API hook
+│   ├── useAttemptRecorder  attempt capture
+│   ├── articulation        articulation data
+│   ├── g2p                 rule-based grapheme→phoneme
+│   ├── customWords         add-your-own-word store
+│   ├── phonemeTokens       phoneme tokenization
+│   └── dictionary          Free Dictionary API + cache
+├── diagnostic/
+│   ├── diagnosticWords     ~27-word coverage bank
+│   ├── inference           honest per-phoneme inference
+│   └── store               diagnostic state
+├── profile/
+│   ├── profile             profile model
+│   └── store               profile store
+├── game/
+│   ├── store               XP/levels + adaptiveSeries()
+│   └── dragon              dragon game state
+├── audio/
+│   ├── dsp                 LPC formants, FFT
+│   ├── scorer              Gaussian formant-distance scoring
+│   ├── phonemes            phoneme reference data
+│   └── calibration         mic calibration
+└── lib/
+    ├── types               shared types
+    ├── colors              palette
+    └── session             session helpers
 ```
-
-## Documentation
-
-- [`docs/RUBRIC.md`](docs/RUBRIC.md) — the judging rubric and our per-criterion strategy
-- [`docs/RESEARCH.md`](docs/RESEARCH.md) — validation, market, competitors, risks, 18 cited sources
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — system design and data flow
-- [`docs/DECISIONS.md`](docs/DECISIONS.md) — assumptions and trade-offs
-
-## License
-
-[MIT](LICENSE) — open source.

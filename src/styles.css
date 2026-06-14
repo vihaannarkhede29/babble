@@ -1,4 +1,4 @@
-/* styles.css — PhonicsForge visual design.
+/* styles.css — Babble visual design.
    Warm, friendly kid palette inherited from the product shell: cream background,
    forest-green ink, dragon-teal primary, coral + sunshine accents, Nunito.
    (--violet/--violet-2 names are kept as the "primary accent" to minimise churn;
@@ -1667,3 +1667,50 @@ body {
 }
 .dash-empty { display: flex; align-items: center; gap: 16px; }
 .dash-empty-emoji { font-size: 36px; }
+
+/* ---------- dictionary word info (Coach) ---------- */
+.wordinfo { max-width: 380px; padding: 10px 14px; text-align: left; font-size: 13px; }
+.wordinfo--loading { color: var(--muted); font-size: 13px; padding: 6px; }
+.wordinfo-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.wordinfo-icon { font-size: 15px; }
+.wordinfo-ipa { font-family: ui-monospace, 'SF Mono', monospace; color: var(--violet-2); font-weight: 700; font-size: 13px; }
+.wordinfo-audio {
+  border: none;
+  background: var(--surface-2);
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.wordinfo-audio:hover { background: #eef7f6; }
+.wordinfo-pos {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+/* faint, unlabelled hint that a deeper definition exists — most never notice */
+.wordinfo-pry { margin-left: auto; color: var(--line); font-weight: 900; letter-spacing: 1px; user-select: none; }
+.wordinfo-def { color: var(--text); line-height: 1.4; }
+.wordinfo-ex { color: var(--muted); font-style: italic; margin-top: 3px; }
+.wordinfo-obscure {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
+  line-height: 1.4;
+  animation: score-pop 0.25s ease;
+}
+.wordinfo-obscure-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--coral);
+  margin-right: 6px;
+}

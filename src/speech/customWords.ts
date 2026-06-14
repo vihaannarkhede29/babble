@@ -8,7 +8,7 @@ import type { PracticeWord } from './words'
 import { wordToPhonemes } from './g2p'
 import { articulationFor } from './articulation'
 
-const STORAGE_KEY = 'phonicsforge.customwords.v1'
+const STORAGE_KEY = 'babble.customwords.v1'
 
 /** Map a focus IPA token onto a built-in phoneme id when it matches one, so the
  *  dashboard/mastery keeps working; otherwise keep the token (still earns XP). */
