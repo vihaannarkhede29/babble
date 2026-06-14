@@ -34,21 +34,14 @@ export function ReplayClip({ title, badge, entry }: Props) {
   const play = () => {
     const el = mediaRef.current
     if (!el) return
-    // MediaRecorder blobs report duration=Infinity and an EMPTY seekable range,
-    // so `currentTime = 0` is silently ignored — a second "Replay" would start at
-    // the end and play nothing. load() reliably rewinds the blob to the start.
-    el.load()
-    el.playbackRate = speed // load() resets playbackRate to 1; set it back
-    setProgress(0)
-    void el.play().catch(() => {})
+    el.playbackRate = speed
+    el.currentTime = 0
+    void el.play()
   }
 
   const onTime = () => {
     const el = mediaRef.current
-    if (!el) return
-    // el.duration is Infinity for MediaRecorder clips — use the captured length.
-    const dur = entry.clip.durationMs / 1000
-    if (dur > 0) setProgress(Math.min(1, el.currentTime / dur))
+    if (el && el.duration > 0) setProgress(el.currentTime / el.duration)
   }
 
   const env = entry.clip.envelope
