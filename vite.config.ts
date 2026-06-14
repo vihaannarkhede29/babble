@@ -18,7 +18,7 @@ export default defineConfig({
         theme_color: '#3bbfbf',
         background_color: '#f7f4ef',
         display: 'standalone',
-        orientation: 'landscape',
+        orientation: 'any',
         icons: [
           { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml' },
           { src: 'icons/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },

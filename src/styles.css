@@ -187,7 +187,9 @@ body {
 .coach {
   height: 100%;
   display: grid;
-  grid-template-columns: 250px 1fr 290px;
+  /* minmax(0,…) lets the track shrink below its content's min-content; without it
+     the 40-word picker forces the column (and the whole grid) ~3800px wide. */
+  grid-template-columns: 250px minmax(0, 1fr) 290px;
   grid-template-rows: 1fr auto;
   grid-template-areas:
     "left center right"
@@ -1262,7 +1264,11 @@ body {
     overflow: auto;
   }
   .coach {
-    grid-template-columns: 1fr;
+    /* stop the 3-col grid's `height:100%; rows:1fr auto` from eating the viewport
+       when stacked — let each section take natural height and the page scroll. */
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(4, auto);
     grid-template-areas:
       "left"
       "center"
@@ -1713,4 +1719,64 @@ body {
   letter-spacing: 0.5px;
   color: var(--coral);
   margin-right: 6px;
+}
+
+/* ============================================================================
+   MOBILE / PWA — portrait phones (~360–430px). The app was desktop/landscape-
+   first; this makes it usable installed on a phone. Pairs with manifest
+   orientation:'any' + viewport-fit=cover (safe-area insets below).
+   ============================================================================ */
+@media (max-width: 560px) {
+  /* let the scroll container own vertical scrolling on phones */
+  body { overflow: auto; }
+
+  /* --- header: compact, wraps to a full-width tab row --- */
+  .app-header {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: max(8px, env(safe-area-inset-top)) 14px 8px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .brand-mark { font-size: 28px; }
+  .brand h1 { font-size: 18px; }
+  .brand p { display: none; } /* drop the tagline on small screens */
+  .level-box { min-width: 0; flex: 1 1 110px; gap: 8px; }
+  .level-badge { font-size: 12px; padding: 5px 10px; }
+  .tabs { flex-basis: 100%; justify-content: space-between; gap: 6px; }
+  .tab { flex: 1; padding: 9px 4px; font-size: 13px; text-align: center; }
+
+  /* --- main: tighter padding + safe-area bottom --- */
+  .app-main { padding: 12px 12px max(14px, env(safe-area-inset-bottom)); }
+
+  /* --- coach --- */
+  .coach { gap: 12px; }
+  .coach-center { gap: 12px; }
+  .prompt-word { font-size: 26px; }
+  .mic-orb { width: 144px; height: 144px; }
+  .mic-orb-face { font-size: 44px; }
+  .wave-canvas { width: 100%; max-width: 320px; height: auto; }
+  .wordinfo, .score-card { max-width: 100%; }
+  .word-picker { justify-content: flex-start; } /* center clips the start when scrolling */
+  .word-card { width: 84px; }
+
+  /* --- home --- */
+  .home-hero { flex-direction: column; text-align: center; gap: 12px; padding: 18px; }
+  .home-greeting { font-size: 24px; }
+  .home-banner { font-size: 14px; padding: 14px 16px; }
+
+  /* --- dashboard / report / settings --- */
+  .dash-title, .settings-title { font-size: 22px; }
+  .report-title { font-size: 22px; }
+  .stat-strip { grid-template-columns: repeat(2, 1fr); }
+  .outcome-big { font-size: 40px; }
+  .slp-table { font-size: 13px; }
+  .slp-table th, .slp-table td { padding: 6px 5px; }
+  .report-actions button { flex: 1 1 auto; }
+
+  /* --- immersive flows: a touch more breathing room --- */
+  .onb, .intro, .diag, .diag-done { padding-left: 18px; padding-right: 18px; }
+  .diag-emoji { font-size: 60px; }
+  .diag-word { font-size: 34px; }
 }
